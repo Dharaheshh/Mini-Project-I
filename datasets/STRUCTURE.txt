@@ -1,0 +1,23 @@
+datasets/
+│
+├── category_classification/
+│   ├── Chair/              ← Put chair damage images here
+│   ├── Bench/              ← Put bench damage images here
+│   ├── Projector/           ← Put projector damage images here
+│   ├── Socket/             ← Put socket damage images here
+│   ├── Pipe/               ← Put pipe damage images here
+│   └── Other/              ← Put other damage images here
+│
+├── priority_prediction/
+│   ├── High/               ← High priority damage images
+│   ├── Medium/             ← Medium priority damage images
+│   └── Low/                ← Low priority damage images
+│
+├── severity_detection/
+│   ├── Minor/              ← Minor damage images
+│   ├── Moderate/           ← Moderate damage images
+│   ├── Severe/             ← Severe damage images
+│   └── Hazardous/          ← Hazardous damage images
+│
+└── raw/                    ← Dump all images here first, then organize
+

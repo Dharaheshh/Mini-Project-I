@@ -7,15 +7,15 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
 // Dynamic CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173', // Vite default
-  'https://mini-project-i-six.vercel.app' // Add your specific Vercel production domain here if known
+  'https://mini-project-i-six.vercel.app', // Vercel production
+  'https://damage-reporting-frontend.vercel.app' // Fallback
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
@@ -30,19 +30,22 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Optional: Allow all during development testing if preferred:
-    // return callback(null, true);
+    // For debugging/development, we can be more permissive if needed:
+    // console.log('Checking origin:', origin);
 
     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);
   },
-  credentials: true,
+  credentials: true, // Keep this if you might use cookies later, but frontend must match. 
+  // Since we removed it from frontend, this doesn't hurt but technically isn't needed.
+  // However, to be safe against future changes, we'll keep it consistent.
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+};
 
-// Handle preflight requests for all routes
-app.options('*', cors());
+app.use(cors(corsOptions));
+// Handle preflight requests for all routes using the SAME options
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -87,10 +87,12 @@ router.post(
         uploadStream.end(req.file.buffer);
       });
 
-      // Use ML predictions or user-provided values (user can override)
+      // LOGIC ENFORCEMENT: User cannot set priority manually.
+      // Priority must come from ML predictions or default to 'Medium' until Admin reviews it.
+      // We allow user to set Category/Note, but Priority is strictly system-controlled.
       const category = req.body.category || mlPredictions.category || 'Other';
-      const priority = req.body.priority || mlPredictions.priority || 'Medium';
       const severity = mlPredictions.severity || 'Moderate';
+      const priority = mlPredictions.priority || 'Medium'; // Ignore req.body.priority entirely
       const note = req.body.note || mlPredictions.description || '';
 
       // Create complaint
@@ -172,7 +174,7 @@ router.post(
       }
 
       const note = req.body.note || '';
-      
+
       // Get ML predictions
       const predictions = await mlService.getAllPredictions(
         req.file.buffer,

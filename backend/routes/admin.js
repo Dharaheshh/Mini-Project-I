@@ -54,6 +54,7 @@ router.put(
         return res.status(404).json({ message: 'Complaint not found' });
       }
 
+      const oldStatus = complaint.status;
       complaint.status = status;
       if (adminNotes) {
         complaint.adminNotes = adminNotes;
@@ -61,6 +62,17 @@ router.put(
 
       await complaint.save();
       await complaint.populate('user', 'name email');
+
+      // Create Notification if status changed
+      if (oldStatus !== status) {
+        const Notification = require('../models/Notification');
+        await Notification.create({
+          user: complaint.user._id,
+          complaint: complaint._id,
+          type: status === 'Resolved' ? 'success' : status === 'In-Progress' ? 'info' : 'warning',
+          message: `Your report for "${complaint.category}" at ${complaint.location} has been updated to: ${status}`
+        });
+      }
 
       res.json(complaint);
     } catch (error) {

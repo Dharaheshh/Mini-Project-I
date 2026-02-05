@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { complaintsAPI } from '../services/api';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
+import DragDropUpload from './ui/DragDropUpload';
+import { Loader2, CheckCircle2, AlertTriangle, MapPin, FileText, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const ComplaintForm = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -9,69 +15,40 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
     category: 'Other',
     priority: 'Medium',
   });
-  const [preview, setPreview] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [predicting, setPredicting] = useState(false);
-  const [error, setError] = useState('');
   const [mlPredictions, setMlPredictions] = useState(null);
-  const [useMLPredictions, setUseMLPredictions] = useState(false);
 
-  const handleChange = (e) => {
-    if (e.target.name === 'image') {
-      const file = e.target.files[0];
-      if (file) {
-        setFormData({ ...formData, image: file });
-        const reader = new FileReader();
-        reader.onloadend = () => setPreview(reader.result);
-        reader.readAsDataURL(file);
-        setMlPredictions(null); // Reset predictions
-
-        // Auto-trigger prediction
-        // We need to use 'file' directly because state update is async
-        handleGetPredictions(file);
-      }
-    } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
-      setUseMLPredictions(false); // User is manually changing, don't use ML predictions
-    }
-    setError('');
+  const handleFileSelect = async (file) => {
+    setFormData({ ...formData, image: file });
+    // Auto-predict
+    await handleGetPredictions(file);
   };
 
-  const handleGetPredictions = async (fileInput = null) => {
-    const imageToUse = fileInput || formData.image;
-
-    if (!imageToUse) {
-      setError('Please select an image first');
-      return;
-    }
-
+  const handleGetPredictions = async (file) => {
     setPredicting(true);
-    setError('');
+    setMlPredictions(null);
 
     try {
       const data = new FormData();
-      data.append('image', imageToUse);
-      if (formData.note) {
-        data.append('note', formData.note);
-      }
+      data.append('image', file);
 
       const response = await complaintsAPI.predict(data);
-
-      // Artificial delay for "effect" if response is too fast
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Small artificial delay for visual effect
+      await new Promise(r => setTimeout(r, 800));
 
       setMlPredictions(response.data);
-
-      // Auto-apply predictions using functional update to preserve 'image' state
       setFormData(prev => ({
         ...prev,
-        category: response.data.category || prev.category,
-        priority: response.data.priority || prev.priority,
+        category: response.data.category,
+        priority: response.data.priority,
+        note: prev.note || response.data.description // Auto-fill note if empty
       }));
-      setUseMLPredictions(true);
+      toast.success("AI Analysis Complete!");
     } catch (err) {
-      setError('Failed to get AI predictions. You can still submit manually.');
       console.error('Prediction error:', err);
+      toast.error("AI Analysis failed, proceeding manually.");
     } finally {
       setPredicting(false);
     }
@@ -80,7 +57,6 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       const data = new FormData();
@@ -91,194 +67,142 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
       data.append('priority', formData.priority);
 
       await complaintsAPI.create(data);
+      toast.success("Complaint submitted successfully!");
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit complaint. Please try again.');
+      toast.error("Failed to submit. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-6 transition-all duration-300 border border-gray-100">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center">
-        <span className="bg-primary-500 text-white p-2 rounded-lg mr-3 shadow-md">❌</span>
-        Submit New Complaint
-      </h2>
-
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-6 animate-pulse">
-          {error}
+    <Card className="max-w-2xl mx-auto shadow-2xl border-0 animate-fade-in">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">New Report</h2>
+          <p className="text-slate-500 text-sm">Submit a facility issue for quick resolution.</p>
         </div>
-      )}
+        <Button variant="ghost" size="icon" onClick={onCancel}>
+          <X size={20} />
+        </Button>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Image Upload Section */}
-        <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-primary-500 transition-colors">
-          <label className="block text-gray-700 text-sm font-bold mb-3">Damage Image *</label>
-          <input
-            type="file"
-            name="image"
-            accept="image/*"
-            onChange={handleChange}
-            required
-            className="block w-full text-sm text-slate-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-full file:border-0
-              file:text-sm file:font-semibold
-              file:bg-primary-50 file:text-primary-700
-              hover:file:bg-primary-100
-              transition-all"
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700">Evidence Photo</label>
+          <DragDropUpload
+            selectedFile={formData.image}
+            onFileSelect={handleFileSelect}
+            onClear={() => {
+              setFormData({ ...formData, image: null });
+              setMlPredictions(null);
+            }}
           />
-
-          {preview && (
-            <div className="mt-4 relative group rounded-lg overflow-hidden shadow-md max-w-md mx-auto">
-              {/* Scan Overlay */}
-              {predicting && (
-                <div className="absolute inset-0 bg-primary-500/20 z-10 border-2 border-primary-500">
-                  <div className="w-full h-1 bg-primary-400 absolute top-0 shadow-[0_0_15px_#38bdf8] animate-scan"></div>
-                  <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded animate-pulse">
-                    Scanning...
-                  </div>
-                </div>
-              )}
-
-              <img src={preview} alt="Preview" className="w-full h-64 object-cover" />
-            </div>
-          )}
         </div>
 
-        {/* AI Results Section */}
-        {mlPredictions && (
-          <div className="bg-gradient-to-r from-primary-50 to-indigo-50 border border-primary-100 rounded-xl p-5 animate-slide-in">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-gray-800 flex items-center">
-                <span className="text-xl mr-2">🤖</span> AI Analysis Report
-              </h3>
-              {useMLPredictions && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full border border-green-200">
-                  ✓ Applied to form
-                </span>
-              )}
+        {/* AI Status / Results */}
+        {predicting && (
+          <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 flex items-center gap-4 animate-pulse">
+            <div className="bg-white p-2 rounded-full shadow-sm">
+              <Loader2 className="animate-spin text-primary-600" size={20} />
+            </div>
+            <div>
+              <p className="font-semibold text-primary-900">Analyzing Image...</p>
+              <p className="text-xs text-primary-600">Detecting object, severity, and urgency.</p>
+            </div>
+          </div>
+        )}
+
+        {!predicting && mlPredictions && (
+          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-xl p-5 relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">✨</span>
+              <h3 className="font-bold text-indigo-900">AI Assessment</h3>
+              <Badge variant="success" className="ml-auto">Active</Badge>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div className="bg-white p-3 rounded-lg shadow-sm">
-                <span className="block text-gray-400 text-xs mb-1">DETECTED OBJECT</span>
-                <span className="text-lg font-bold text-gray-800">{mlPredictions.category}</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/60 p-3 rounded-lg backdrop-blur-sm">
+                <p className="text-xs text-slate-500 uppercase font-semibold">Category</p>
+                <p className="text-lg font-bold text-slate-800">{mlPredictions.category}</p>
               </div>
-              <div className="bg-white p-3 rounded-lg shadow-sm">
-                <span className="block text-gray-400 text-xs mb-1">SUGGESTED PRIORITY</span>
-                <span className={`text-lg font-bold ${mlPredictions.priority === 'High' ? 'text-red-600' :
-                  mlPredictions.priority === 'Medium' ? 'text-yellow-600' : 'text-green-600'
+              <div className="bg-white/60 p-3 rounded-lg backdrop-blur-sm">
+                <p className="text-xs text-slate-500 uppercase font-semibold">Priority</p>
+                <p className={`text-lg font-bold ${mlPredictions.priority === 'High' ? 'text-red-600' :
+                  mlPredictions.priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
                   }`}>
                   {mlPredictions.priority}
-                </span>
+                </p>
               </div>
-              <div className="bg-white p-3 rounded-lg shadow-sm">
-                <span className="block text-gray-400 text-xs mb-1">SEVERITY SCORE</span>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '75%' }}></div>
-                </div>
-                <span className="text-xs text-right block mt-1 text-blue-600 font-medium">Moderate</span>
-              </div>
-
-              {mlPredictions.duplicate?.is_duplicate && (
-                <div className="bg-red-50 p-3 rounded-lg shadow-sm border border-red-100">
-                  <span className="block text-red-400 text-xs mb-1">DUPLICATE ALERT</span>
-                  <span className="text-red-700 font-bold text-xs">
-                    Similar to report #{mlPredictions.duplicate.similar_complaint_id}
-                  </span>
-                </div>
-              )}
             </div>
-
-            {mlPredictions.description && (
-              <div className="mt-3 bg-white p-3 rounded-lg shadow-sm border-l-4 border-secondary-500">
-                <span className="block text-gray-400 text-xs mb-1">GENERATED DESCRIPTION</span>
-                <p className="text-gray-600 italic">"{mlPredictions.description}"</p>
+            {mlPredictions.duplicate?.is_duplicate && (
+              <div className="mt-3 bg-red-100/50 p-2 rounded text-xs font-semibold text-red-700 flex items-center">
+                <AlertTriangle size={14} className="mr-2" />
+                Possible duplicate detected (Score: {mlPredictions.duplicate.similarity_score.toFixed(2)})
               </div>
             )}
           </div>
         )}
 
-        {/* Standard Fields */}
+        {/* Manual Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">Location *</label>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 flex items-center">
+              <MapPin size={16} className="mr-1 text-slate-400" />
+              Location
+            </label>
             <input
               type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="e.g., Room 101, Building A"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
+              className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              placeholder="e.g. Room 304, Library"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             />
           </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">Category (AI Detected)</label>
-            <div className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 font-medium">
-              {formData.category}
+          <div className="space-y-2 opacity-50 cursor-not-allowed">
+            <label className="text-sm font-semibold text-slate-700 flex items-center">
+              <AlertTriangle size={14} className="mr-1 text-amber-500" />
+              System Priority
+            </label>
+            <div className={`w-full h-10 px-3 flex items-center bg-slate-50 rounded-lg border border-slate-200 font-medium ${formData.priority === 'High' ? 'text-red-600' :
+                formData.priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
+              }`}>
+              {formData.priority}
+              <span className="text-xs text-slate-400 ml-auto font-normal">Auto-assigned</span>
             </div>
-            {/* Hidden select to ensure value tracks if needed, or just rely on state */}
           </div>
         </div>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Priority (AI Assigned)</label>
-          <div className={`w-full px-4 py-3 rounded-lg font-bold border flex items-center
-              ${formData.priority === 'High' ? 'bg-red-50 border-red-200 text-red-700' :
-              formData.priority === 'Medium' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-                'bg-green-50 border-green-200 text-green-700'}
-           `}>
-            <span className="mr-2">
-              {formData.priority === 'High' ? '🔴' : formData.priority === 'Medium' ? '🟡' : '🟢'}
-            </span>
-            {formData.priority} Priority
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Additional Notes</label>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 flex items-center">
+            <FileText size={16} className="mr-1 text-slate-400" />
+            Description
+          </label>
           <textarea
-            name="note"
+            className="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none min-h-[100px]"
+            placeholder="Describe the issue..."
             value={formData.note}
-            onChange={handleChange}
-            rows="3"
-            placeholder="Describe the damage..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
+            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
           />
         </div>
 
-        <div className="flex space-x-4 pt-4">
-          <button
+        {/* Actions */}
+        <div className="flex gap-4 pt-4">
+          <Button
             type="submit"
-            disabled={loading}
-            className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-semibold shadow-md hover:bg-primary-700 hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
+            className="flex-1"
+            size="lg"
+            isLoading={loading}
+            disabled={!formData.image || !formData.location}
           >
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Submitting...
-              </>
-            ) : 'Submit Complaint'}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="px-6 bg-white text-gray-700 border border-gray-300 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
+            Submit Report
+          </Button>
         </div>
-      </form >
-    </div >
+      </form>
+    </Card>
   );
 };
 

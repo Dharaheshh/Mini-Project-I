@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
-import { Bar, Doughnut } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
-  Legend,
-  ArcElement,
-} from 'chart.js';
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
+import {
+  Filter,
+  Download,
+  Search,
+  MoreVertical,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  FileText
+} from 'lucide-react';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { StatsCard } from '../components/ui/StatsCard';
 
 const AdminDashboard = () => {
   const [complaints, setComplaints] = useState([]);
@@ -31,7 +46,6 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // In a real app, you might want to debounce this
       const [complaintsRes, statsRes] = await Promise.all([
         adminAPI.getAllComplaints(filters),
         adminAPI.getStats(),
@@ -48,10 +62,9 @@ const AdminDashboard = () => {
   const handleStatusChange = async (id, newStatus) => {
     try {
       await adminAPI.updateStatus(id, { status: newStatus });
-      fetchData(); // Refresh to ensure consistency
+      fetchData();
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Failed to update status');
     }
   };
 
@@ -59,329 +72,244 @@ const AdminDashboard = () => {
     setFilters({ ...filters, [key]: value });
   };
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      'Submitted': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'In-Progress': 'bg-primary-100 text-primary-800 border-primary-200',
-      'Resolved': 'bg-green-100 text-green-800 border-green-200',
-    };
-    return styles[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getPriorityBadge = (priority) => {
-    const styles = {
-      'High': 'bg-red-50 text-red-700 ring-1 ring-red-600/20',
-      'Medium': 'bg-orange-50 text-orange-700 ring-1 ring-orange-600/20',
-      'Low': 'bg-teal-50 text-teal-700 ring-1 ring-teal-600/20',
-    };
-    return styles[priority] || 'bg-gray-50 text-gray-700';
-  };
-
-  // Chart Configuration
-  const barChartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: false,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          display: true,
-          drawBorder: false,
-        },
-      },
-      x: {
-        grid: {
-          display: false,
-        },
-      },
-    },
-  };
-
-  const chartData = stats?.categoryStats
-    ? {
-      labels: stats.categoryStats.map((item) => item._id),
-      datasets: [
-        {
-          label: 'Complaints',
-          data: stats.categoryStats.map((item) => item.count),
-          backgroundColor: [
-            '#0ea5e9', // primary-500
-            '#6366f1', // secondary-500
-            '#f59e0b', // amber-500
-            '#ef4444', // red-500
-            '#8b5cf6', // violet-500
-            '#10b981', // emerald-500
-          ],
-          borderRadius: 6,
-        },
-      ],
-    }
-    : null;
-
-  // Mock data for a second chart (Priority Distribution) - purely for visuals
-  const priorityChartData = {
-    labels: ['High', 'Medium', 'Low'],
-    datasets: [
-      {
-        data: [
-          complaints.filter(c => c.priority === 'High').length,
-          complaints.filter(c => c.priority === 'Medium').length,
-          complaints.filter(c => c.priority === 'Low').length,
-        ],
-        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-        borderWidth: 0,
-      },
-    ],
-  };
-
+  const COLORS = ['#8b5cf6', '#d946ef', '#0ea5e9', '#f59e0b', '#ef4444', '#10b981'];
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-600 mb-4"></div>
-          <p className="text-gray-500 animate-pulse">Loading Admin Dashboard...</p>
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center animate-pulse">
+          <div className="h-12 w-12 bg-primary-200 rounded-full mb-4"></div>
+          <div className="h-4 w-48 bg-slate-200 rounded"></div>
         </div>
       </div>
     );
   }
 
+  // Prepare Chart Data
+  const categoryData = stats?.categoryStats?.map(item => ({
+    name: item._id,
+    value: item.count
+  })) || [];
+
+  const priorityData = [
+    { name: 'High', value: complaints.filter(c => c.priority === 'High').length, color: '#ef4444' },
+    { name: 'Medium', value: complaints.filter(c => c.priority === 'Medium').length, color: '#f59e0b' },
+    { name: 'Low', value: complaints.filter(c => c.priority === 'Low').length, color: '#10b981' },
+  ].filter(d => d.value > 0);
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
+    <div className="space-y-8 animate-slide-up">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="container mx-auto px-6 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-500 mt-1">Overview of campus infrastructure status</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Last Updated</p>
-              <p className="font-semibold text-gray-800">{new Date().toLocaleTimeString()}</p>
-            </div>
-          </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Admin Overview</h1>
+          <p className="text-slate-500">Real-time infrastructure monitoring dashboard.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm">
+            <Download size={16} className="mr-2" />
+            Export Report
+          </Button>
+          <Button size="sm">
+            <Filter size={16} className="mr-2" />
+            Advanced Filters
+          </Button>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8">
-
-        {/* Stats Grid */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Reports</h3>
-                  <p className="text-4xl font-extrabold text-gray-900 mt-2">{stats.totalComplaints}</p>
-                </div>
-                <div className="p-3 bg-indigo-50 rounded-lg">
-                  <span className="text-2xl">📊</span>
-                </div>
-              </div>
-              <div className="mt-4 text-xs text-green-600 font-medium bg-green-50 inline-block px-2 py-1 rounded">
-                +12% from last month
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Pending</h3>
-                  <p className="text-4xl font-extrabold text-yellow-500 mt-2">{stats.status.submitted}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></span>
-                </div>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1 mt-6">
-                <div className="bg-yellow-500 h-1 rounded-full" style={{ width: `${(stats.status.submitted / stats.totalComplaints) * 100}%` }}></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">In Progress</h3>
-                  <p className="text-4xl font-extrabold text-primary-600 mt-2">{stats.status.inProgress}</p>
-                </div>
-                <div className="p-3 bg-primary-50 rounded-lg text-primary-600">
-                  ⚙️
-                </div>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1 mt-6">
-                <div className="bg-primary-600 h-1 rounded-full" style={{ width: `${(stats.status.inProgress / stats.totalComplaints) * 100}%` }}></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Resolved</h3>
-                  <p className="text-4xl font-extrabold text-green-600 mt-2">{stats.status.resolved}</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg text-green-600">
-                  ✅
-                </div>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1 mt-6">
-                <div className="bg-green-600 h-1 rounded-full" style={{ width: `${(stats.status.resolved / stats.totalComplaints) * 100}%` }}></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 col-span-2">
-            <h2 className="text-lg font-bold text-gray-800 mb-6">Reports by Category</h2>
-            <div className="h-64">
-              {chartData && <Bar data={chartData} options={barChartOptions} />}
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center justify-between">
-              Priority Breakdown
-              <span className="text-xs font-normal text-gray-500 border rounded px-2 py-1">Live</span>
-            </h2>
-            <div className="h-48 relative flex items-center justify-center">
-              <Doughnut
-                data={priorityChartData}
-                options={{
-                  cutout: '70%',
-                  plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } }
-                }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-2xl font-bold text-gray-300">!</span>
-              </div>
-            </div>
-          </div>
+      {/* Stats Grid */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatsCard
+            title="Total Reports"
+            value={stats.totalComplaints}
+            icon={FileText}
+            color="primary"
+            trend="up"
+            trendValue="12%"
+          />
+          <StatsCard
+            title="Pending Actions"
+            value={stats.status.submitted}
+            icon={Clock}
+            color="warning"
+          />
+          <StatsCard
+            title="In Progress"
+            value={stats.status.inProgress}
+            icon={CheckCircle}
+            color="primary"
+          />
+          <StatsCard
+            title="Critical Issues"
+            value={priorityData.find(p => p.name === 'High')?.value || 0}
+            icon={AlertTriangle}
+            color="danger"
+          />
         </div>
+      )}
 
-        {/* Filters & Controls */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-700 font-semibold">
-            <span className="bg-gray-100 p-2 rounded">🔍</span> Filter Reports
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Reports by Category</h3>
+            <p className="text-sm text-slate-500">Distribution of facility issues</p>
           </div>
-          <div className="flex flex-wrap gap-3 w-full md:w-auto">
-            <select
-              value={filters.category}
-              onChange={(e) => handleFilterChange('category', e.target.value)}
-              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-            >
-              <option value="">All Categories</option>
-              <option value="Chair">Chair</option>
-              <option value="Bench">Bench</option>
-              <option value="Projector">Projector</option>
-              <option value="Socket">Socket</option>
-              <option value="Pipe">Pipe</option>
-              <option value="Other">Other</option>
-            </select>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categoryData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+                <Tooltip
+                  cursor={{ fill: '#f1f5f9' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
 
-            <select
-              value={filters.priority}
-              onChange={(e) => handleFilterChange('priority', e.target.value)}
-              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-            >
-              <option value="">All Priorities</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
+        <Card>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Priority Breakdown</h3>
+            <p className="text-sm text-slate-500">Severity assessment</p>
+          </div>
+          <div className="h-[300px] flex items-center justify-center relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={priorityData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {priorityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <span className="text-2xl font-bold text-slate-800">{stats?.totalComplaints || 0}</span>
+                <p className="text-xs text-slate-500">Total</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
 
+      {/* Main Table */}
+      <Card className="overflow-hidden p-0 border-0 shadow-lg">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
+          <h3 className="text-lg font-bold text-slate-800">Recent Reports</h3>
+
+          <div className="flex gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search reports..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              />
+            </div>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
             >
               <option value="">All Statuses</option>
-              <option value="Submitted">Submitted</option>
-              <option value="In-Progress">In-Progress</option>
+              <option value="Submitted">Pending</option>
+              <option value="In-Progress">In Progress</option>
               <option value="Resolved">Resolved</option>
             </select>
           </div>
         </div>
 
-        {/* Complaints List Table Style */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Issue</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {complaints.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-4">Image/Description</th>
-                  <th className="px-6 py-4">Category</th>
-                  <th className="px-6 py-4">Location</th>
-                  <th className="px-6 py-4">Priority</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Actions</th>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                    No reports found matching your filters.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {complaints.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-400">
-                      No reports found matching your filters.
+              ) : (
+                complaints.map((complaint) => (
+                  <tr key={complaint._id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 shadow-sm relative group-hover:scale-105 transition-transform">
+                          <img src={complaint.image.url} alt="Damage" className="h-full w-full object-cover" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900 line-clamp-1 w-48">{complaint.note || 'No description'}</p>
+                          <p className="text-xs text-slate-500 flex items-center mt-1">
+                            <Clock size={12} className="mr-1" />
+                            {new Date(complaint.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="neutral">{complaint.category}</Badge>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {complaint.location}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={
+                        complaint.priority === 'High' ? 'danger' :
+                          complaint.priority === 'Medium' ? 'warning' : 'success'
+                      }>
+                        {complaint.priority}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={
+                        complaint.status === 'Resolved' ? 'success' :
+                          complaint.status === 'In-Progress' ? 'default' : 'warning'
+                      } className="capitalize">
+                        {complaint.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <select
+                        value={complaint.status}
+                        onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
+                        className="text-xs border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 py-1.5 px-2 bg-white shadow-sm cursor-pointer"
+                      >
+                        <option value="Submitted">Pending</option>
+                        <option value="In-Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                      </select>
                     </td>
                   </tr>
-                ) : (
-                  complaints.map((complaint) => (
-                    <tr key={complaint._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
-                            <img src={complaint.image.url} alt="Damage" className="h-full w-full object-cover" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 line-clamp-1 w-48">{complaint.note || 'No description'}</p>
-                            <p className="text-xs text-gray-500">{new Date(complaint.createdAt).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-600">
-                          {complaint.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {complaint.location}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPriorityBadge(complaint.priority)}`}>
-                          {complaint.priority}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-semibold border rounded-full ${getStatusBadge(complaint.status)}`}>
-                          {complaint.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          value={complaint.status}
-                          onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
-                          className="text-sm border-gray-200 rounded-md focus:ring-2 focus:ring-primary-500 py-1"
-                        >
-                          <option value="Submitted">Pending</option>
-                          <option value="In-Progress">In Progress</option>
-                          <option value="Resolved">Resolved</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

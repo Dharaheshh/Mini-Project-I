@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { complaintsAPI } from '../services/api';
 import ComplaintForm from '../components/ComplaintForm';
 import ComplaintList from '../components/ComplaintList';
+import { StatsCard } from '../components/ui/StatsCard';
+import { Button } from '../components/ui/Button';
+import { PlusCircle, ListChecks, Clock, CheckCircle2 } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 const Dashboard = () => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [viewState, setViewState] = useState('list'); // 'list' or 'create'
 
   useEffect(() => {
     fetchComplaints();
@@ -25,29 +29,85 @@ const Dashboard = () => {
 
   const handleComplaintCreated = () => {
     fetchComplaints();
-    setShowForm(false);
+    setViewState('list');
+  };
+
+  // Calculate simple stats for the user
+  const stats = {
+    total: complaints.length,
+    pending: complaints.filter(c => c.status === 'Submitted').length,
+    resolved: complaints.filter(c => c.status === 'Resolved').length
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">My Complaints</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          {showForm ? 'Cancel' : '+ New Complaint'}
-        </button>
+    <div className="space-y-8 animate-slide-up">
+      <Toaster position="top-right" />
+
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Student Dashboard</h1>
+          <p className="text-slate-500">Track and report campus infrastructure issues.</p>
+        </div>
+
+        {viewState === 'list' && (
+          <Button
+            onClick={() => setViewState('create')}
+            className="shadow-lg shadow-primary-500/20"
+            size="lg"
+          >
+            <PlusCircle size={20} className="mr-2" />
+            New Report
+          </Button>
+        )}
       </div>
 
-      {showForm && <ComplaintForm onSuccess={handleComplaintCreated} onCancel={() => setShowForm(false)} />}
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatsCard
+          title="My Reports"
+          value={stats.total}
+          icon={ListChecks}
+          color="primary"
+        />
+        <StatsCard
+          title="Pending Integration"
+          value={stats.pending}
+          icon={Clock}
+          color="warning"
+        />
+        <StatsCard
+          title="Resolved"
+          value={stats.resolved}
+          icon={CheckCircle2}
+          color="success"
+        />
+      </div>
 
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      {/* Main Content Area */}
+      {viewState === 'create' ? (
+        <div className="animate-fade-in">
+          <ComplaintForm
+            onSuccess={handleComplaintCreated}
+            onCancel={() => setViewState('list')}
+          />
         </div>
       ) : (
-        <ComplaintList complaints={complaints} />
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-800">Recent History</h2>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-64 rounded-xl bg-slate-100 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <ComplaintList complaints={complaints} />
+          )}
+        </div>
       )}
     </div>
   );

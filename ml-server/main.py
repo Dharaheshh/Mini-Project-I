@@ -5,6 +5,7 @@ from typing import Optional, List
 import uvicorn
 from dotenv import load_dotenv
 import os
+import asyncio
 
 from services.category_classifier import CategoryClassifier
 from services.priority_predictor import PriorityPredictor
@@ -142,15 +143,38 @@ async def predict_all(
     Returns: category, priority, severity, description, duplicate_info
     """
     try:
+        print("⚡ REQUEST RECEIVED: /predict/all ⚡")
         contents = await file.read()
         
-        # Run all predictions (can be parallelized)
-        category = await category_classifier.predict(contents)
-        priority = await priority_predictor.predict(contents, category, note)
-        severity = await severity_detector.predict(contents)
-        description = await description_generator.generate(contents, category)
-        duplicate_info = await duplicate_detector.detect(contents, existing_images or [])
+        # --- SEQUENTIAL EXECUTION (Optimized) ---
         
+        # 1. Category (Fast)
+        print("1. Running Category Classifier...")
+        category = await category_classifier.predict(contents)
+        print(f"   -> Category: {category}")
+
+        # 2. Severity (Fast)
+        print("2. Running Severity Detector...")
+        severity = await severity_detector.predict(contents)
+        
+        # 3. Duplicate (DISABLED - Performance Bottleneck)
+        print("3. Duplicate Detector: DISABLED")
+        duplicate_info = {
+            "is_duplicate": False, 
+            "similarity_score": 0.0, 
+            "similar_complaint_id": None,
+            "message": "Disabled for performance"
+        }
+
+        # 4. Priority (Fast)
+        print(f"4. Running Priority Predictor (Category: {category})...")
+        priority = await priority_predictor.predict(contents, category, note)
+
+        # 5. Description (Fast)
+        print("5. Running Description Generator...")
+        description = await description_generator.generate(contents, category)
+        
+        print("✅ Returning full response...")
         return {
             "category": category,
             "priority": priority,
@@ -159,6 +183,9 @@ async def predict_all(
             "duplicate": duplicate_info
         }
     except Exception as e:
+        # Log the full error for debugging
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

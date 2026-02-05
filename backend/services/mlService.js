@@ -31,13 +31,20 @@ class MLService {
         formData,
         {
           headers: formData.getHeaders(),
-          timeout: 10000, // 10 second timeout
+          timeout: 120000, // 120 second timeout
         }
       );
 
       return response.data;
     } catch (error) {
-      console.error('ML Service Error:', error.message);
+      console.error('❌ ML SERVICE ERROR:', error.message);
+      if (error.response) {
+        console.error('   Status:', error.response.status);
+        console.error('   Data:', JSON.stringify(error.response.data));
+      } else if (error.request) {
+        console.error('   No response received from ML Server at', `${ML_API_URL}/predict/all`);
+      }
+
       // Return defaults if ML service is unavailable
       return {
         category: 'Other',

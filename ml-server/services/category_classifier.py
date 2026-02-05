@@ -26,12 +26,14 @@ except ImportError:
 
 class CategoryClassifier:
     def __init__(self):
-        self.categories = ['Chair', 'Bench', 'Projector', 'Socket', 'Pipe', 'Other']
+        # CRITICAL: Must match ImageFolder alphabetical order from training
+        self.categories = ['Bench', 'Chair', 'Other', 'Pipe', 'Projector', 'Socket']
         self.model = None
         if TORCH_AVAILABLE:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             self.transform = transforms.Compose([
-                transforms.Resize((224, 224)),
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
@@ -55,6 +57,24 @@ class CategoryClassifier:
             self.model.eval()
             self.model.to(self.device)
             print("✅ Category classifier model loaded")
+            
+            # Load trained weights if available
+            import os
+            if os.path.exists("model.pth"):
+                try:
+                    state_dict = torch.load("model.pth", map_location=self.device)
+                    # Handle state dict mismatch if classes changed (safe loading)
+                    current_dict = self.model.state_dict()
+                    # Filter out unnecessary keys
+                    pretrained_dict = {k: v for k, v in state_dict.items() if k in current_dict and v.shape == current_dict[k].shape}
+                    current_dict.update(pretrained_dict)
+                    self.model.load_state_dict(current_dict)
+                    print(f"🎉 Loaded CUSTOM TRAINED weights from model.pth")
+                except Exception as e:
+                    print(f"⚠️ Found model.pth but failed to load: {e}")
+            else:
+                print("ℹ️  Using default ImageNet weights (untrained head)")
+                
         except Exception as e:
             print(f"⚠️  Could not load model: {e}. Using rule-based fallback.")
             self.model = None
@@ -77,6 +97,16 @@ class CategoryClassifier:
             with torch.no_grad():
                 outputs = self.model(image_tensor)
                 probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
+                
+                # Debug: Print top 3 predictions
+                top3_prob, top3_idx = torch.topk(probabilities, 3)
+                print(f"🔍 Top 3 Predictions:")
+                for i in range(3):
+                    idx = top3_idx[i].item()
+                    prob = top3_prob[i].item()
+                    name = self.categories[idx]
+                    print(f"   {i+1}. {name}: {prob:.4f}")
+
                 predicted_idx = torch.argmax(probabilities).item()
                 confidence = probabilities[predicted_idx].item()
             

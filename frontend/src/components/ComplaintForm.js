@@ -24,7 +24,11 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
         const reader = new FileReader();
         reader.onloadend = () => setPreview(reader.result);
         reader.readAsDataURL(file);
-        setMlPredictions(null); // Reset predictions when new image is selected
+        setMlPredictions(null); // Reset predictions
+
+        // Auto-trigger prediction
+        // We need to use 'file' directly because state update is async
+        handleGetPredictions(file);
       }
     } else {
       setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,8 +37,10 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
     setError('');
   };
 
-  const handleGetPredictions = async () => {
-    if (!formData.image) {
+  const handleGetPredictions = async (fileInput = null) => {
+    const imageToUse = fileInput || formData.image;
+
+    if (!imageToUse) {
       setError('Please select an image first');
       return;
     }
@@ -44,7 +50,7 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
 
     try {
       const data = new FormData();
-      data.append('image', formData.image);
+      data.append('image', imageToUse);
       if (formData.note) {
         data.append('note', formData.note);
       }
@@ -56,12 +62,12 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
 
       setMlPredictions(response.data);
 
-      // Auto-apply predictions
-      setFormData({
-        ...formData,
-        category: response.data.category || formData.category,
-        priority: response.data.priority || formData.priority,
-      });
+      // Auto-apply predictions using functional update to preserve 'image' state
+      setFormData(prev => ({
+        ...prev,
+        category: response.data.category || prev.category,
+        priority: response.data.priority || prev.priority,
+      }));
       setUseMLPredictions(true);
     } catch (err) {
       setError('Failed to get AI predictions. You can still submit manually.');
@@ -138,18 +144,6 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
               )}
 
               <img src={preview} alt="Preview" className="w-full h-64 object-cover" />
-
-              {!predicting && !mlPredictions && (
-                <div className="absolute bottom-4 right-4">
-                  <button
-                    type="button"
-                    onClick={handleGetPredictions}
-                    className="bg-secondary-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-secondary-700 hover:shadow-xl transition-all flex items-center font-medium transform hover:-translate-y-1"
-                  >
-                    <span className="mr-2">✨</span> Analyze with AI
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -176,7 +170,7 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
               <div className="bg-white p-3 rounded-lg shadow-sm">
                 <span className="block text-gray-400 text-xs mb-1">SUGGESTED PRIORITY</span>
                 <span className={`text-lg font-bold ${mlPredictions.priority === 'High' ? 'text-red-600' :
-                    mlPredictions.priority === 'Medium' ? 'text-yellow-600' : 'text-green-600'
+                  mlPredictions.priority === 'Medium' ? 'text-yellow-600' : 'text-green-600'
                   }`}>
                   {mlPredictions.priority}
                 </span>
@@ -224,47 +218,25 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">Category</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
-            >
-              <option value="Chair">Chair</option>
-              <option value="Bench">Bench</option>
-              <option value="Projector">Projector</option>
-              <option value="Socket">Socket</option>
-              <option value="Pipe">Pipe</option>
-              <option value="Other">Other</option>
-            </select>
+            <label className="block text-gray-700 text-sm font-bold mb-2">Category (AI Detected)</label>
+            <div className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 font-medium">
+              {formData.category}
+            </div>
+            {/* Hidden select to ensure value tracks if needed, or just rely on state */}
           </div>
         </div>
 
         <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Priority</label>
-          <div className="flex space-x-4">
-            {['Low', 'Medium', 'High'].map((p) => (
-              <label key={p} className={`
-                    flex-1 cursor-pointer rounded-lg border p-3 text-center transition-all
-                    ${formData.priority === p
-                  ? (p === 'High' ? 'bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500' :
-                    p === 'Medium' ? 'bg-yellow-50 border-yellow-500 text-yellow-700 ring-1 ring-yellow-500' :
-                      'bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500')
-                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                }
-                  `}>
-                <input
-                  type="radio"
-                  name="priority"
-                  value={p}
-                  checked={formData.priority === p}
-                  onChange={handleChange}
-                  className="hidden"
-                />
-                <span className="font-semibold">{p}</span>
-              </label>
-            ))}
+          <label className="block text-gray-700 text-sm font-bold mb-2">Priority (AI Assigned)</label>
+          <div className={`w-full px-4 py-3 rounded-lg font-bold border flex items-center
+              ${formData.priority === 'High' ? 'bg-red-50 border-red-200 text-red-700' :
+              formData.priority === 'Medium' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                'bg-green-50 border-green-200 text-green-700'}
+           `}>
+            <span className="mr-2">
+              {formData.priority === 'High' ? '🔴' : formData.priority === 'Medium' ? '🟡' : '🟢'}
+            </span>
+            {formData.priority} Priority
           </div>
         </div>
 
@@ -305,8 +277,8 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
             Cancel
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 };
 

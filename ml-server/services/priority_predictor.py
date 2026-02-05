@@ -98,6 +98,9 @@ class PriorityPredictor:
         """
         try:
             image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+            # OPTIMIZATION: Resize to small resolution for analysis
+            # Processing 12MP images pixel-by-pixel in Python is too slow
+            image = image.resize((224, 224))
             width, height = image.size
             
             # Analyze image characteristics

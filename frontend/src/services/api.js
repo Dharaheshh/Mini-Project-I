@@ -1,12 +1,24 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const getBaseUrl = () => {
+  // In production, strictly use the environment variable
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.REACT_APP_API_URL;
+  }
+  // In development, fallback to localhost if env is missing
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+};
+
+const API_URL = getBaseUrl();
+
+console.log('🔌 Connecting to API at:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true // Important for CORS cookies/sessions if used
 });
 
 // Add token to all requests

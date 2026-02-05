@@ -17,10 +17,11 @@ load_dotenv()
 
 app = FastAPI(title="Damage Reporting ML API", version="1.0.0")
 
-# CORS middleware
+# CORS middleware - Allow all for simplicity in this setup since it's an internal-ish API
+# In production, you might restrict this to just the Backend URL
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5000"],
+    allow_origins=["*"], # Allow all origins creates least friction for connection 4
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

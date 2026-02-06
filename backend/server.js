@@ -27,11 +27,12 @@ app.get('/', (req, res) => {
 
 // 3. CORS (Standard)
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  origin: true,
+  credentials: true
 }));
+
 app.options('*', cors());
+
 
 // 4. BODY PARSERS
 app.use(express.json());

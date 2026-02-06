@@ -8,15 +8,14 @@ dotenv.config();
 const app = express();
 
 // Middleware
-// Simplest possible CORS for successful demo deployment
-app.use(cors({
-  origin: '*', // Allow ALL origins
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+// STANDARD DEFAULT CORS - Allows All Origins, Logged for Debugging
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.path} from ${req.headers.origin}`);
+  next();
+});
 
-// Handle preflight requests
-app.options('*', cors());
+app.use(cors()); // Defaults to origin: *
+app.options('*', cors()); // Handle preflights
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -33,16 +32,18 @@ app.get('/api/health', (req, res) => {
 });
 
 // MongoDB Connection
+console.log('⏳ Attempting MongoDB connection...');
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/damage-reporting', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
   .then(() => {
-    console.log('✅ MongoDB Connected');
+    console.log('✅ MongoDB Connected Successfully');
   })
   .catch((err) => {
     console.error('❌ MongoDB Connection Error:', err.message);
+    // Do not exit process, let server run to return 500s or at least CORS headers
   });
 
 const PORT = process.env.PORT || 5000;

@@ -7,22 +7,31 @@ dotenv.config();
 
 const app = express();
 
-// 1. LOGGING MIDDLEWARE (First to catch everything)
+// 1. AGGRESSIVE LOGGING (Log everything immediately)
 app.use((req, res, next) => {
-  console.log(`👉 [${req.method}] ${req.path}`);
+  console.log(`👉 [${req.method}] ${req.url} - Origin: ${req.headers.origin}`);
   next();
 });
 
-// 2. CORS MIDDLEWARE (Standard Library)
-// We explicitly allow "*" to avoid any origin matching issues.
+// 2. CORS (Universal Allow)
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
-// 3. HANDLE PREFLIGHTS
-app.options('*', cors()); // Enable preflight for all requests
+// Preflight handler
+app.options('*', cors());
+
+// 3. DEBUG ENDPOINT (Ping this to verify API is reachable)
+app.get('/api/test-cors', (req, res) => {
+  console.log('✅ /api/test-cors hit!');
+  res.json({
+    status: 'success',
+    message: 'Backend is reachable and CORS is active',
+    yourOrigin: req.headers.origin
+  });
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -33,9 +42,9 @@ app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 
-// Root Route (to prevent 404s on base URL checks)
+// Root
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.send('API is running... Use /api/test-cors to verify connectivity.');
 });
 
 // Health check

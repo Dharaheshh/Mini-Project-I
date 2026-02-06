@@ -26,10 +26,7 @@ app.get('/', (req, res) => {
 });
 
 // 3. CORS (Standard)
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+app.use(cors());
 
 app.options('*', cors());
 

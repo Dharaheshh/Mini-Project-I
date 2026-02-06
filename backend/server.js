@@ -1,35 +1,28 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Keeping import but bypassing library for manual control
+const cors = require('cors');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
 const app = express();
 
-// MANUAL CORS MIDDLEWARE (The "Nuclear" Option)
-// This strictly forces the headers on every response, bypassing any library quirks.
+// 1. LOGGING MIDDLEWARE (First to catch everything)
 app.use((req, res, next) => {
-  // Allow any origin
-  res.header("Access-Control-Allow-Origin", "*");
-
-  // Allow necessary methods
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-
-  // Allow dynamic headers from the request, or standard ones
-  const allowedHeaders = req.headers['access-control-request-headers'] || "Content-Type, Authorization, X-Requested-With";
-  res.header("Access-Control-Allow-Headers", allowedHeaders);
-
-  // Debug log to confirm request reached us
-  console.log(`📡 [${req.method}] ${req.path} - Origin: ${req.headers.origin || 'Unknown'}`);
-
-  // Intercept OPTIONS method for preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).send();
-  }
-
+  console.log(`👉 [${req.method}] ${req.path}`);
   next();
 });
+
+// 2. CORS MIDDLEWARE (Standard Library)
+// We explicitly allow "*" to avoid any origin matching issues.
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// 3. HANDLE PREFLIGHTS
+app.options('*', cors()); // Enable preflight for all requests
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -40,13 +33,18 @@ app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 
+// Root Route (to prevent 404s on base URL checks)
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
 // MongoDB Connection
-console.log('⏳ Attempting MongoDB connection...');
+console.log('⏳ Connecting to MongoDB...');
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/damage-reporting', {
     useNewUrlParser: true,
@@ -56,7 +54,7 @@ mongoose
     console.log('✅ MongoDB Connected');
   })
   .catch((err) => {
-    console.error('❌ MongoDB Connection Error:', err.message);
+    console.error('❌ MongoDB Error:', err.message);
   });
 
 const PORT = process.env.PORT || 5000;

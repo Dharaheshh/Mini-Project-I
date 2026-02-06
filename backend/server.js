@@ -7,45 +7,41 @@ dotenv.config();
 
 const app = express();
 
-// 1. AGGRESSIVE LOGGING (Log everything immediately)
+// 1. LOGGING (First)
 app.use((req, res, next) => {
   console.log(`👉 [${req.method}] ${req.url} - Origin: ${req.headers.origin}`);
   next();
 });
 
-// 2. CORS (Universal Allow)
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-}));
-
-// Preflight handler
-app.options('*', cors());
-
-// 3. DEBUG ENDPOINT (Ping this to verify API is reachable)
-app.get('/api/test-cors', (req, res) => {
-  console.log('✅ /api/test-cors hit!');
-  res.json({
-    status: 'success',
-    message: 'Backend is reachable and CORS is active',
-    yourOrigin: req.headers.origin
-  });
+// 2. DEBUG ROUTES (IMMEDIATELY AFTER LOGGING - NO MIDDLEWARE)
+// This proves if the server is even capable of responding.
+app.get('/api/test-debug', (req, res) => {
+  console.log('✅ /api/test-debug hit! sending response...');
+  res.header("Access-Control-Allow-Origin", "*"); // Manual header for this route only
+  res.json({ status: 'alive', message: 'If you see this, the server is working.' });
 });
 
+app.get('/', (req, res) => {
+  res.send('API Root is reachable.');
+});
+
+// 3. CORS (Standard)
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+app.options('*', cors());
+
+// 4. BODY PARSERS
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// 5. APP ROUTES
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
-
-// Root
-app.get('/', (req, res) => {
-  res.send('API is running... Use /api/test-cors to verify connectivity.');
-});
 
 // Health check
 app.get('/api/health', (req, res) => {

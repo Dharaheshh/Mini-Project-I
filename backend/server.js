@@ -1,21 +1,35 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors = require('cors'); // Keeping import but bypassing library for manual control
 const dotenv = require('dotenv');
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
-// STANDARD DEFAULT CORS - Allows All Origins, Logged for Debugging
+// MANUAL CORS MIDDLEWARE (The "Nuclear" Option)
+// This strictly forces the headers on every response, bypassing any library quirks.
 app.use((req, res, next) => {
-  console.log(`Incoming request: ${req.method} ${req.path} from ${req.headers.origin}`);
+  // Allow any origin
+  res.header("Access-Control-Allow-Origin", "*");
+
+  // Allow necessary methods
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+
+  // Allow dynamic headers from the request, or standard ones
+  const allowedHeaders = req.headers['access-control-request-headers'] || "Content-Type, Authorization, X-Requested-With";
+  res.header("Access-Control-Allow-Headers", allowedHeaders);
+
+  // Debug log to confirm request reached us
+  console.log(`📡 [${req.method}] ${req.path} - Origin: ${req.headers.origin || 'Unknown'}`);
+
+  // Intercept OPTIONS method for preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).send();
+  }
+
   next();
 });
-
-app.use(cors()); // Defaults to origin: *
-app.options('*', cors()); // Handle preflights
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -39,11 +53,10 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => {
-    console.log('✅ MongoDB Connected Successfully');
+    console.log('✅ MongoDB Connected');
   })
   .catch((err) => {
     console.error('❌ MongoDB Connection Error:', err.message);
-    // Do not exit process, let server run to return 500s or at least CORS headers
   });
 
 const PORT = process.env.PORT || 5000;

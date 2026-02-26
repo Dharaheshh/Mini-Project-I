@@ -51,12 +51,11 @@ class CategoryClassifier:
             
         try:
             # Use MobileNet for lightweight inference
-            self.model = models.mobilenet_v2(pretrained=True)
+            from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
+            weights = MobileNet_V2_Weights.DEFAULT
+            self.model = mobilenet_v2(weights=weights)
             # Modify last layer for 6 categories
             self.model.classifier[1] = nn.Linear(self.model.last_channel, len(self.categories))
-            self.model.eval()
-            self.model.to(self.device)
-            print("✅ Category classifier model loaded")
             
             # Load trained weights if available
             import os
@@ -74,6 +73,10 @@ class CategoryClassifier:
                     print(f"⚠️ Found model.pth but failed to load: {e}")
             else:
                 print("ℹ️  Using default ImageNet weights (untrained head)")
+            
+            self.model.eval()
+            self.model.to(self.device)
+            print("✅ ML model loaded successfully and set to eval mode")
                 
         except Exception as e:
             print(f"⚠️  Could not load model: {e}. Using rule-based fallback.")

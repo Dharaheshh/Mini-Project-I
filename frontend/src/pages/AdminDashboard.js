@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
+  Mail
 } from 'lucide-react';
 
 import { Card } from '../components/ui/Card';
@@ -44,6 +45,8 @@ const AdminDashboard = () => {
   });
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingDept, setExportingDept] = useState(null);
+  const [sendingEmail, setSendingEmail] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -98,6 +101,44 @@ const AdminDashboard = () => {
       alert('Failed to export report');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleDepartmentExport = async (department) => {
+    try {
+      setExportingDept(department);
+      const response = await adminAPI.exportDepartmentReport(department);
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${department}-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export department error:', error);
+      alert('Failed to export department report');
+    } finally {
+      setExportingDept(null);
+    }
+  };
+
+  const handleSendEmail = async (department) => {
+    if (!window.confirm(`Are you sure you want to generate and email the report to the ${department} supervisor?`)) return;
+
+    try {
+      setSendingEmail(department);
+      const response = await adminAPI.sendDepartmentReport(department);
+      alert(response.data.message || 'Report sent successfully');
+    } catch (error) {
+      console.error('Email send error:', error);
+      alert(error.response?.data?.message || 'Failed to dispatch email to supervisor.');
+    } finally {
+      setSendingEmail(null);
     }
   };
 
@@ -177,6 +218,31 @@ const AdminDashboard = () => {
           />
         </div>
       )}
+
+      {/* Supervisor Reports (Department Scopes) */}
+      <Card className="p-6">
+        <h3 className="text-xl font-bold flex items-center text-slate-800 mb-2">
+          📊 Supervisor Reports
+        </h3>
+        <p className="text-sm text-slate-500 mb-6">Instantly export or dispatch departmental summary sheets directly to assigned supervisors.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {['infrastructure', 'electrical', 'plumbing'].map((dept) => (
+            <div key={dept} className="flex flex-col p-5 bg-slate-50 hover:bg-primary-50/30 transition-colors rounded-xl border border-slate-200">
+              <h4 className="font-bold text-slate-900 capitalize mb-4 text-center">{dept} Department</h4>
+              <div className="flex flex-col gap-3 mt-auto">
+                <Button variant="outline" size="sm" className="w-full justify-center !text-primary-600 border-primary-200 hover:bg-primary-50" onClick={() => handleDepartmentExport(dept)} disabled={exportingDept === dept || sendingEmail === dept}>
+                  <Download size={14} className="mr-2" />
+                  {exportingDept === dept ? 'Generating...' : 'Download PDF'}
+                </Button>
+                <Button size="sm" className="w-full justify-center shadow-lg hover:shadow-primary-500/30" onClick={() => handleSendEmail(dept)} disabled={sendingEmail === dept || exportingDept === dept}>
+                  <Mail size={14} className="mr-2" />
+                  {sendingEmail === dept ? 'Dispatching...' : 'Send via Email'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

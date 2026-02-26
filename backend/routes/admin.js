@@ -26,6 +26,65 @@ router.get('/export-report', async (req, res) => {
   }
 });
 
+// @route   POST /api/admin/export-department-report
+// @desc    Generate and export department-specific PDF report
+// @access  Private/Admin
+router.post('/export-department-report', async (req, res) => {
+  try {
+    const { department } = req.body;
+    if (!['infrastructure', 'electrical', 'plumbing'].includes(department)) {
+      return res.status(400).json({ message: 'Invalid department scope provided' });
+    }
+
+    const reportService = require('../services/reportService');
+    const pdfBuffer = await reportService.generateReport({ type: 'department', department });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${department}-report.pdf`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Export department report error:', error);
+    res.status(500).json({ message: 'Server error while mapping departmental PDF' });
+  }
+});
+
+// @route   POST /api/admin/send-department-report
+// @desc    Email department-specific PDF report directly to assigned Supervisor
+// @access  Private/Admin
+router.post('/send-department-report', async (req, res) => {
+  try {
+    const { department } = req.body;
+    if (!['infrastructure', 'electrical', 'plumbing'].includes(department)) {
+      return res.status(400).json({ message: 'Invalid department scope provided' });
+    }
+
+    const User = require('../models/User');
+    const supervisor = await User.findOne({ role: 'supervisor', department });
+
+    if (!supervisor) {
+      return res.status(404).json({ message: `No active supervisor mapped to the ${department} department.` });
+    }
+
+    const reportService = require('../services/reportService');
+    const emailService = require('../services/emailService');
+
+    // Generate strict buffer in memory
+    const pdfBuffer = await reportService.generateReport({ type: 'department', department });
+
+    const total = await Complaint.countDocuments({ assignedDepartment: department });
+    const resolved = await Complaint.countDocuments({ assignedDepartment: department, status: 'Resolved' });
+    const pending = await Complaint.countDocuments({ assignedDepartment: department, status: { $in: ['Submitted', 'In-Progress'] } });
+
+    // Stream Buffer explicitly to Nodemailer
+    await emailService.sendSupervisorReport(supervisor, department, { total, resolved, pending }, pdfBuffer);
+
+    res.json({ message: `Report dispatched successfully to ${supervisor.email}` });
+  } catch (error) {
+    console.error('Send department report error:', error);
+    res.status(500).json({ message: 'Server error during SMTP email dispatch.' });
+  }
+});
+
 // @route   GET /api/admin/complaints
 // @desc    Get all complaints with filters
 // @access  Private/Admin

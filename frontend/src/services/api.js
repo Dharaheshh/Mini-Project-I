@@ -66,6 +66,8 @@ export const adminAPI = {
   updateComplaint: (id, data) => api.put(`/admin/complaints/${id}`, data),
   getStats: () => api.get('/admin/stats'),
   exportReport: (filters) => api.get('/admin/export-report', { params: filters, responseType: 'arraybuffer' }),
+  exportDepartmentReport: (department) => api.post('/admin/export-department-report', { department }, { responseType: 'arraybuffer' }),
+  sendDepartmentReport: (department) => api.post('/admin/send-department-report', { department }),
   getHeatmap: (filter) => api.get('/admin/heatmap', { params: { filter } }),
 };
 

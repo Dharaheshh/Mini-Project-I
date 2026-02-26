@@ -4,13 +4,18 @@ const path = require('path');
 const Complaint = require('../models/Complaint');
 
 const generateReport = async (filters) => {
-  const { startDate, endDate } = filters;
+  const { startDate, endDate, type, department } = filters;
   const matchquery = {};
 
   if (startDate || endDate) {
     matchquery.createdAt = {};
     if (startDate) matchquery.createdAt.$gte = new Date(startDate);
     if (endDate) matchquery.createdAt.$lte = new Date(endDate);
+  }
+
+  // Inject Supervisor Department scoping securely
+  if (type === 'department' && department) {
+    matchquery.assignedDepartment = department;
   }
 
   // Aggregations

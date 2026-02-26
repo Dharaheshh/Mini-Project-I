@@ -16,6 +16,11 @@ const createTransporter = () => {
 
 const sendSupervisorReport = async (supervisor, department, stats, pdfBuffer) => {
     try {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.warn('⚠️ SMTP Credentials missing in environment configuration. Email dispatch aborted safely.');
+            return false;
+        }
+
         const transporter = createTransporter();
 
         const mailOptions = {

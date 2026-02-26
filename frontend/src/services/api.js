@@ -1,12 +1,12 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
-  // In production, strictly use the environment variable
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.REACT_APP_API_URL;
+  // In production, strictly use the environment variable defined by Vercel
+  if (process.env.NODE_ENV === 'production' || process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   }
-  // In development, fallback to localhost if env is missing
-  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  // In pure local dev mode
+  return 'http://localhost:5000/api';
 };
 
 const API_URL = getBaseUrl();

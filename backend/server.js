@@ -64,7 +64,7 @@ mongoose
     console.error('❌ MongoDB Error:', err.message);
   });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT; // Rely exclusively on process.env.PORT
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

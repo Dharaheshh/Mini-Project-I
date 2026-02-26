@@ -66,6 +66,12 @@ export const adminAPI = {
   updateComplaint: (id, data) => api.put(`/admin/complaints/${id}`, data),
   getStats: () => api.get('/admin/stats'),
   exportReport: (filters) => api.get('/admin/export-report', { params: filters, responseType: 'arraybuffer' }),
+  getHeatmap: (filter) => api.get('/admin/heatmap', { params: { filter } }),
+};
+
+// Blocks API (Public Info)
+export const blocksAPI = {
+  getAll: () => api.get('/blocks'),
 };
 
 // Settings API

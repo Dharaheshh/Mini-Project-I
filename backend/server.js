@@ -37,11 +37,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // 5. APP ROUTES
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/user', require('./routes/user'));
 app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/user', require('./routes/user'));
+app.use('/api/blocks', require('./routes/blocks')); // Standardized blocks
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -9,7 +9,8 @@ import {
     X,
     Bell,
     Search,
-    User
+    User,
+    Map
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useAuthStore } from '../store/authStore';
@@ -44,8 +45,7 @@ const Layout = ({ children }) => {
 
     const menuItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: user?.role === 'admin' ? '/admin' : '/dashboard' },
-        // For students, Dashboard IS the report list, preventing redundant links.
-        // { icon: FileText, label: 'My Reports', path: '/reports' }, 
+        ...(user?.role === 'admin' ? [{ icon: Map, label: 'Campus Heatmap', path: '/admin/heatmap' }] : []),
         { icon: Settings, label: 'Settings', path: user?.role === 'admin' ? '/admin/settings' : '/settings' },
     ];
 

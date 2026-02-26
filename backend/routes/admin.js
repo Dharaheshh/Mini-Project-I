@@ -204,5 +204,43 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/heatmap
+// @desc    Get dynamic heatmap data
+// @access  Private/Admin
+router.get('/heatmap', async (req, res) => {
+  try {
+    const { filter = 'total' } = req.query;
+    const matchquery = {};
+
+    switch (filter) {
+      case 'pending':
+        matchquery.status = { $in: ['Submitted', 'In-Progress'] };
+        break;
+      case 'high':
+        matchquery.priority = 'High';
+        break;
+      case 'total':
+      default:
+        // No additional filters
+        break;
+    }
+
+    const heatmapStats = await Complaint.aggregate([
+      { $match: matchquery },
+      { $group: { _id: '$location', count: { $sum: 1 } } }
+    ]);
+
+    const formattedData = heatmapStats.map(stat => ({
+      location: stat._id,
+      count: stat.count
+    }));
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error('Heatmap API error:', error);
+    res.status(500).json({ message: 'Server error generating heatmap' });
+  }
+});
+
 module.exports = router;
 

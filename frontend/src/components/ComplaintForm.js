@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
-import { complaintsAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { complaintsAPI, blocksAPI } from '../services/api';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import DragDropUpload from './ui/DragDropUpload';
-import { Loader2, CheckCircle2, AlertTriangle, MapPin, FileText, X } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, MapPin, FileText, X, Navigation } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const ComplaintForm = ({ onSuccess, onCancel }) => {
+  const [blocks, setBlocks] = useState([]);
   const [formData, setFormData] = useState({
     image: null,
     location: '',
+    classroom: '',
     note: '',
     category: 'Other',
     priority: 'Medium',
@@ -19,6 +21,18 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [predicting, setPredicting] = useState(false);
   const [mlPredictions, setMlPredictions] = useState(null);
+
+  useEffect(() => {
+    const fetchBlocks = async () => {
+      try {
+        const response = await blocksAPI.getAll();
+        setBlocks(response.data);
+      } catch (error) {
+        console.error('Failed to fetch blocks:', error);
+      }
+    };
+    fetchBlocks();
+  }, []);
 
   const handleFileSelect = async (file) => {
     setFormData({ ...formData, image: file });
@@ -62,6 +76,7 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
       const data = new FormData();
       data.append('image', formData.image);
       data.append('location', formData.location);
+      if (formData.classroom) data.append('classroom', formData.classroom);
       data.append('note', formData.note);
       data.append('category', formData.category);
       data.append('priority', formData.priority);
@@ -148,27 +163,47 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
 
         {/* Manual Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center">
-              <MapPin size={16} className="mr-1 text-slate-400" />
-              Location
-            </label>
-            <input
-              type="text"
-              required
-              className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-              placeholder="e.g. Room 304, Library"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex items-center">
+                <MapPin size={16} className="mr-1 text-slate-400" />
+                Campus Block
+              </label>
+              <select
+                required
+                className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              >
+                <option value="" disabled>Select a building/block</option>
+                {blocks.map((block) => (
+                  <option key={block.name} value={block.name}>{block.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex items-center">
+                <Navigation size={16} className="mr-1 text-slate-400" />
+                Classroom / Specific Area (Optional)
+              </label>
+              <input
+                type="text"
+                className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                placeholder="e.g. Room 304, Near water cooler"
+                value={formData.classroom}
+                onChange={(e) => setFormData({ ...formData, classroom: e.target.value })}
+              />
+            </div>
           </div>
+
           <div className="space-y-2 opacity-50 cursor-not-allowed">
             <label className="text-sm font-semibold text-slate-700 flex items-center">
               <AlertTriangle size={14} className="mr-1 text-amber-500" />
               System Priority
             </label>
             <div className={`w-full h-10 px-3 flex items-center bg-slate-50 rounded-lg border border-slate-200 font-medium ${formData.priority === 'High' ? 'text-red-600' :
-                formData.priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
+              formData.priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
               }`}>
               {formData.priority}
               <span className="text-xs text-slate-400 ml-auto font-normal">Auto-assigned</span>

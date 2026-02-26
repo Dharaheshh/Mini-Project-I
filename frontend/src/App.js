@@ -9,6 +9,7 @@ import Layout from './components/Layout';
 
 import Settings from './pages/Settings';
 import AdminSettings from './pages/AdminSettings';
+import CampusHeatmapDemo from './components/heatmap/CampusHeatmapDemo';
 import ComplaintDetails from './pages/ComplaintDetails';
 
 const NotFound = () => (
@@ -49,6 +50,10 @@ function App() {
         <Route
           path="/admin/settings"
           element={user && user.role === 'admin' ? <Layout><AdminSettings /></Layout> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/admin/heatmap"
+          element={user && user.role === 'admin' ? <Layout><CampusHeatmapDemo /></Layout> : <Navigate to="/login" />}
         />
         <Route
           path="/settings"

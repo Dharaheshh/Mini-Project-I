@@ -8,6 +8,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import Layout from './components/Layout';
 
 import Settings from './pages/Settings';
+import AdminSettings from './pages/AdminSettings';
+import ComplaintDetails from './pages/ComplaintDetails';
 
 const NotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-center px-4">
@@ -45,8 +47,16 @@ function App() {
           element={user && user.role === 'admin' ? <Layout><AdminDashboard /></Layout> : <Navigate to="/login" />}
         />
         <Route
+          path="/admin/settings"
+          element={user && user.role === 'admin' ? <Layout><AdminSettings /></Layout> : <Navigate to="/login" />}
+        />
+        <Route
           path="/settings"
           element={user ? <Layout><Settings /></Layout> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/complaints/:id"
+          element={user ? <Layout><ComplaintDetails /></Layout> : <Navigate to="/login" />}
         />
 
         {/* Catch-all */}

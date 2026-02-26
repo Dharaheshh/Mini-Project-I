@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import {
   BarChart,
@@ -37,7 +38,12 @@ const AdminDashboard = () => {
     category: '',
     priority: '',
     status: '',
+    startDate: '',
+    endDate: '',
+    search: '',
   });
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -70,6 +76,29 @@ const AdminDashboard = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters({ ...filters, [key]: value });
+  };
+
+  const handleExportReport = async () => {
+    try {
+      setExporting(true);
+      const response = await adminAPI.exportReport(filters);
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `damage-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export report error:', error);
+      alert('Failed to export report');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const COLORS = ['#8b5cf6', '#d946ef', '#0ea5e9', '#f59e0b', '#ef4444', '#10b981'];
@@ -106,11 +135,11 @@ const AdminDashboard = () => {
           <p className="text-slate-500">Real-time infrastructure monitoring dashboard.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportReport} disabled={exporting}>
             <Download size={16} className="mr-2" />
-            Export Report
+            {exporting ? 'Exporting...' : 'Export Report'}
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setShowFilterModal(true)}>
             <Filter size={16} className="mr-2" />
             Advanced Filters
           </Button>
@@ -217,7 +246,9 @@ const AdminDashboard = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
-                placeholder="Search reports..."
+                placeholder="Search location..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
               />
             </div>
@@ -292,7 +323,7 @@ const AdminDashboard = () => {
                         {complaint.status}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex justify-end gap-3 items-center mt-3 border-none">
                       <select
                         value={complaint.status}
                         onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
@@ -302,6 +333,9 @@ const AdminDashboard = () => {
                         <option value="In-Progress">In Progress</option>
                         <option value="Resolved">Resolved</option>
                       </select>
+                      <Link to={`/complaints/${complaint._id}`} className="text-slate-400 hover:text-primary-600 p-1">
+                        <MoreVertical size={16} />
+                      </Link>
                     </td>
                   </tr>
                 ))
@@ -310,6 +344,91 @@ const AdminDashboard = () => {
           </table>
         </div>
       </Card>
+
+      {/* Advanced Filter Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in p-4">
+          <Card className="w-full max-w-md animate-scale-up">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 flex items-center">
+                <Filter size={18} className="mr-2" /> Advanced Filters
+              </h3>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Category</label>
+                <select
+                  value={filters.category}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Chair">Chair</option>
+                  <option value="Bench">Bench</option>
+                  <option value="Projector">Projector</option>
+                  <option value="Socket">Socket</option>
+                  <option value="Pipe">Pipe</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Priority</label>
+                <select
+                  value={filters.priority}
+                  onChange={(e) => handleFilterChange('priority', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                >
+                  <option value="">All Priorities</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-b-xl border-t border-slate-100 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setFilters({ category: '', priority: '', status: '', startDate: '', endDate: '', search: '' })}
+              >
+                Reset
+              </Button>
+              <Button onClick={() => setShowFilterModal(false)}>
+                Apply Filters
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

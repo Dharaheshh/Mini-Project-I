@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
         { icon: LayoutDashboard, label: 'Dashboard', path: user?.role === 'admin' ? '/admin' : '/dashboard' },
         // For students, Dashboard IS the report list, preventing redundant links.
         // { icon: FileText, label: 'My Reports', path: '/reports' }, 
-        { icon: Settings, label: 'Settings', path: '/settings' },
+        { icon: Settings, label: 'Settings', path: user?.role === 'admin' ? '/admin/settings' : '/settings' },
     ];
 
     return (

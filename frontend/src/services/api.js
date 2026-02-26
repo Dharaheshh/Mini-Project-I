@@ -65,6 +65,26 @@ export const adminAPI = {
   updateStatus: (id, data) => api.put(`/admin/complaints/${id}/status`, data),
   updateComplaint: (id, data) => api.put(`/admin/complaints/${id}`, data),
   getStats: () => api.get('/admin/stats'),
+  exportReport: (filters) => api.get('/admin/export-report', { params: filters, responseType: 'arraybuffer' }),
+};
+
+// Settings API
+export const settingsAPI = {
+  get: () => api.get('/settings'),
+  update: (data) => api.put('/settings', data),
+};
+
+// User API
+export const userAPI = {
+  getProfile: () => api.get('/user/profile'),
+  updateProfile: (data) => api.put('/user/profile', data),
+  updatePassword: (data) => api.put('/user/password', data),
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getAll: () => api.get('/notifications'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
 };
 
 export default api;

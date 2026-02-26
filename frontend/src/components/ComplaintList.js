@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { MapPin, Calendar, Clock, ChevronRight } from 'lucide-react';
@@ -51,7 +52,7 @@ const ComplaintList = ({ complaints }) => {
               <div className="flex items-center ml-auto font-medium">
                 Priority:
                 <span className={`ml-1 ${complaint.priority === 'High' ? 'text-red-600' :
-                    complaint.priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
+                  complaint.priority === 'Medium' ? 'text-amber-600' : 'text-green-600'
                   }`}>
                   {complaint.priority}
                 </span>
@@ -66,10 +67,10 @@ const ComplaintList = ({ complaints }) => {
                 {complaint.status}
               </Badge>
 
-              <button className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center group/btn">
+              <Link to={`/complaints/${complaint._id}`} className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center group/btn">
                 Details
                 <ChevronRight size={16} className="ml-1 group-hover/btn:translate-x-1 transition-transform" />
-              </button>
+              </Link>
             </div>
           </div>
         </Card>

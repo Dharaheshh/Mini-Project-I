@@ -108,10 +108,38 @@ router.post(
         priority: priority,
         severity: severity,
         status: 'Submitted',
+        statusHistory: [{ status: 'Submitted' }],
       });
 
       await complaint.save();
       await complaint.populate('user', 'name email');
+
+      // Notify admins about new complaint and possible high priority
+      const Notification = require('../models/Notification');
+      const User = require('../models/User');
+      const admins = await User.find({ role: 'admin' });
+      const adminNotifs = [];
+      admins.forEach(admin => {
+        adminNotifs.push({
+          user: admin._id,
+          complaint: complaint._id,
+          title: 'New Complaint Submitted',
+          type: 'info',
+          message: `A new complaint has been submitted for "${complaint.category}" at ${complaint.location}`
+        });
+        if (complaint.priority === 'High' || complaint.priority === 'Critical') {
+          adminNotifs.push({
+            user: admin._id,
+            complaint: complaint._id,
+            title: 'High Priority Complaint',
+            type: 'warning',
+            message: `A HIGH PRIORITY complaint was reported for "${complaint.category}" at ${complaint.location}`
+          });
+        }
+      });
+      if (adminNotifs.length > 0) {
+        await Notification.insertMany(adminNotifs);
+      }
 
       res.status(201).json(complaint);
     } catch (error) {

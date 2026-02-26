@@ -9,18 +9,44 @@ const router = express.Router();
 router.use(auth);
 router.use(adminAuth);
 
+// @route   GET /api/admin/export-report
+// @desc    Generate and export PDF report
+// @access  Private/Admin
+router.get('/export-report', async (req, res) => {
+  try {
+    const reportService = require('../services/reportService');
+    const pdfBuffer = await reportService.generateReport(req.query);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=damage-report.pdf');
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Export report error:', error);
+    res.status(500).json({ message: 'Server error while generating report' });
+  }
+});
+
 // @route   GET /api/admin/complaints
 // @desc    Get all complaints with filters
 // @access  Private/Admin
 router.get('/complaints', async (req, res) => {
   try {
-    const { category, priority, status } = req.query;
+    const { category, priority, status, startDate, endDate, userLocation, search } = req.query;
 
     // Build filter object
     const filter = {};
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
     if (status) filter.status = status;
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    if (search) {
+      // Allow searching by exact user ID or location string if needed
+      filter.location = { $regex: search, $options: 'i' };
+    }
 
     const complaints = await Complaint.find(filter)
       .populate('user', 'name email')
@@ -56,6 +82,7 @@ router.put(
 
       const oldStatus = complaint.status;
       complaint.status = status;
+      complaint.statusHistory.push({ status });
       if (adminNotes) {
         complaint.adminNotes = adminNotes;
       }
@@ -69,6 +96,7 @@ router.put(
         await Notification.create({
           user: complaint.user._id,
           complaint: complaint._id,
+          title: 'Status Updated',
           type: status === 'Resolved' ? 'success' : status === 'In-Progress' ? 'info' : 'warning',
           message: `Your report for "${complaint.category}" at ${complaint.location} has been updated to: ${status}`
         });
@@ -105,12 +133,29 @@ router.put(
         return res.status(404).json({ message: 'Complaint not found' });
       }
 
-      const { priority, category, severity, adminNotes } = req.body;
+      const oldPriority = complaint.priority;
 
       if (priority) complaint.priority = priority;
       if (category) complaint.category = category;
       if (severity) complaint.severity = severity;
       if (adminNotes) complaint.adminNotes = adminNotes;
+
+      // Handle priority change notification explicitly
+      if (priority === 'High' && oldPriority !== 'High') {
+        const Notification = require('../models/Notification');
+        const User = require('../models/User');
+        const admins = await User.find({ role: 'admin' });
+        const adminNotifs = admins.map(admin => ({
+          user: admin._id,
+          complaint: complaint._id,
+          title: 'High Priority Complaint',
+          type: 'warning',
+          message: `Complaint priority upgraded to HIGH for "${complaint.category}" at ${complaint.location}`
+        }));
+        if (adminNotifs.length > 0) {
+          await Notification.insertMany(adminNotifs);
+        }
+      }
 
       await complaint.save();
       await complaint.populate('user', 'name email');

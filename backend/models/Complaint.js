@@ -50,11 +50,23 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    statusHistory: [
+      {
+        status: { type: String },
+        date: { type: Date, default: Date.now }
+      }
+    ]
   },
   {
     timestamps: true,
   }
 );
 
+complaintSchema.index({ status: 1 });
+complaintSchema.index({ category: 1 });
+complaintSchema.index({ priority: 1 });
+complaintSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Complaint', complaintSchema);
+
 

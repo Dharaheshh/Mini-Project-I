@@ -34,5 +34,16 @@ const adminAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { auth, adminAuth };
+const requireSupervisor = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'supervisor') {
+      return res.status(403).json({ message: 'Access denied. Supervisor only.' });
+    }
+    next();
+  } catch (error) {
+    res.status(403).json({ message: 'Access denied' });
+  }
+};
+
+module.exports = { auth, adminAuth, requireSupervisor };
 

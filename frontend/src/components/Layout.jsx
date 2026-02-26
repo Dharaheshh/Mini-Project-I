@@ -44,9 +44,10 @@ const Layout = ({ children }) => {
     };
 
     const menuItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: user?.role === 'admin' ? '/admin' : '/dashboard' },
+        ...(user?.role === 'supervisor' ? [{ icon: LayoutDashboard, label: 'Department Ops', path: '/supervisor' }] : []),
+        ...(user?.role !== 'supervisor' ? [{ icon: LayoutDashboard, label: 'Dashboard', path: user?.role === 'admin' ? '/admin' : '/dashboard' }] : []),
         ...(user?.role === 'admin' ? [{ icon: Map, label: 'Campus Heatmap', path: '/admin/heatmap' }] : []),
-        { icon: Settings, label: 'Settings', path: user?.role === 'admin' ? '/admin/settings' : '/settings' },
+        ...(user?.role !== 'supervisor' ? [{ icon: Settings, label: 'Settings', path: user?.role === 'admin' ? '/admin/settings' : '/settings' }] : []),
     ];
 
     return (

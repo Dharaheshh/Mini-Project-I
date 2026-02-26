@@ -43,6 +43,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/blocks', require('./routes/blocks')); // Standardized blocks
+app.use('/api/supervisor', require('./routes/supervisor')); // Dept Supervisor routes
 
 // Health check
 app.get('/api/health', (req, res) => {

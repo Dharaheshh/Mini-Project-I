@@ -90,9 +90,19 @@ router.post(
       // LOGIC ENFORCEMENT: User cannot set priority manually.
       // Priority must come from ML predictions or default to 'Medium' until Admin reviews it.
       // We allow user to set Category/Note, but Priority is strictly system-controlled.
+      // Map categories to departments
+      const categoryMap = {
+        'Chair': 'infrastructure',
+        'Bench': 'infrastructure',
+        'Projector': 'electrical',
+        'Socket': 'electrical',
+        'Pipe': 'plumbing'
+      };
+
       const category = req.body.category || mlPredictions.category || 'Other';
       const severity = mlPredictions.severity || 'Moderate';
       const priority = mlPredictions.priority || 'Medium'; // Ignore req.body.priority entirely
+      const assignedDepartment = categoryMap[category] || 'infrastructure'; // Default safety fallback
       const note = req.body.note || mlPredictions.description || '';
 
       // Create complaint
@@ -103,10 +113,12 @@ router.post(
           publicId: uploadResult.public_id,
         },
         location: req.body.location,
+        classroom: req.body.classroom,
         note: note,
         category: category,
         priority: priority,
         severity: severity,
+        assignedDepartment: assignedDepartment,
         status: 'Submitted',
         statusHistory: [{ status: 'Submitted' }],
       });

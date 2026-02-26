@@ -22,9 +22,16 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'admin', 'supervisor'],
       default: 'user',
     },
+    department: {
+      type: String,
+      enum: ['infrastructure', 'electrical', 'plumbing'],
+      required: function () {
+        return this.role === 'supervisor';
+      }
+    }
   },
   {
     timestamps: true,

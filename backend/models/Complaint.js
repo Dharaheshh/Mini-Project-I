@@ -50,6 +50,10 @@ const complaintSchema = new mongoose.Schema(
       enum: ['Minor', 'Moderate', 'Severe', 'Hazardous'],
       default: 'Moderate',
     },
+    assignedDepartment: {
+      type: String,
+      enum: ['infrastructure', 'electrical', 'plumbing']
+    },
     adminNotes: {
       type: String,
       trim: true,

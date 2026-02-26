@@ -69,6 +69,12 @@ export const adminAPI = {
   getHeatmap: (filter) => api.get('/admin/heatmap', { params: { filter } }),
 };
 
+// Supervisor API
+export const supervisorAPI = {
+  getAssignedComplaints: (filters) => api.get('/supervisor/complaints', { params: filters }),
+  updateStatus: (id, data) => api.put(`/supervisor/complaints/${id}/status`, data),
+};
+
 // Blocks API (Public Info)
 export const blocksAPI = {
   getAll: () => api.get('/blocks'),

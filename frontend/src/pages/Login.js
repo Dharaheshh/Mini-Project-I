@@ -23,7 +23,7 @@ const Login = () => {
     try {
       const response = await authAPI.login(formData);
       setAuth(response.data.user, response.data.token);
-      navigate(response.data.user.role === 'admin' ? '/admin' : '/dashboard');
+      navigate(response.data.user.role === 'admin' ? '/admin' : response.data.user.role === 'supervisor' ? '/supervisor' : '/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {

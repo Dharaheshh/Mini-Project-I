@@ -11,6 +11,7 @@ import Settings from './pages/Settings';
 import AdminSettings from './pages/AdminSettings';
 import CampusHeatmapDemo from './components/heatmap/CampusHeatmapDemo';
 import ComplaintDetails from './pages/ComplaintDetails';
+import SupervisorDashboard from './pages/SupervisorDashboard';
 
 const NotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-center px-4">
@@ -31,17 +32,21 @@ function App() {
         {/* Public Routes */}
         <Route
           path="/login"
-          element={user ? <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Login />}
+          element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'supervisor' ? '/supervisor' : '/dashboard'} /> : <Login />}
         />
         <Route
           path="/register"
-          element={user ? <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Register />}
+          element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'supervisor' ? '/supervisor' : '/dashboard'} /> : <Register />}
         />
 
         {/* Protected Routes wrapped in Layout */}
         <Route
           path="/dashboard"
           element={user ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/supervisor"
+          element={user && user.role === 'supervisor' ? <Layout><SupervisorDashboard /></Layout> : <Navigate to="/dashboard" />}
         />
         <Route
           path="/admin"
@@ -65,7 +70,7 @@ function App() {
         />
 
         {/* Catch-all */}
-        <Route path="/" element={<Navigate to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/login'} />} />
+        <Route path="/" element={<Navigate to={user ? (user.role === 'admin' ? '/admin' : user.role === 'supervisor' ? '/supervisor' : '/dashboard') : '/login'} />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

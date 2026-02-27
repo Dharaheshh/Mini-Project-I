@@ -10,6 +10,8 @@ Uses CNN (MobileNet/ResNet) to classify damage images into categories:
 """
 try:
     import torch
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
     import torch.nn as nn
     from torchvision import models, transforms
     TORCH_AVAILABLE = True
@@ -30,10 +32,9 @@ class CategoryClassifier:
         self.categories = ['Bench', 'Chair', 'Other', 'Pipe', 'Projector', 'Socket']
         self.model = None
         if TORCH_AVAILABLE:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device('cpu')
             self.transform = transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
+                transforms.Resize((160, 160)),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
@@ -51,9 +52,8 @@ class CategoryClassifier:
             
         try:
             # Use MobileNet for lightweight inference
-            from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
-            weights = MobileNet_V2_Weights.DEFAULT
-            self.model = mobilenet_v2(weights=weights)
+            from torchvision.models import mobilenet_v2
+            self.model = mobilenet_v2(weights=None)
             # Modify last layer for 6 categories
             self.model.classifier[1] = nn.Linear(self.model.last_channel, len(self.categories))
             
@@ -112,6 +112,13 @@ class CategoryClassifier:
 
                 predicted_idx = torch.argmax(probabilities).item()
                 confidence = probabilities[predicted_idx].item()
+                
+                del outputs
+                del image_tensor
+            
+            image.close()
+            import gc
+            gc.collect()
             
             category = self.categories[predicted_idx]
             

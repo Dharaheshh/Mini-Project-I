@@ -34,6 +34,10 @@ severity_detector = SeverityDetector()
 duplicate_detector = DuplicateDetector()
 description_generator = DescriptionGenerator()
 
+import psutil, os
+process = psutil.Process(os.getpid())
+print(f"Startup memory usage: {process.memory_info().rss / 1024 / 1024} MB")
+
 class PredictionRequest(BaseModel):
     category: Optional[str] = None
     note: Optional[str] = None

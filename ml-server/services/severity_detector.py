@@ -25,9 +25,16 @@ class SeverityDetector:
         """
         try:
             image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+            # CRITICAL memory fix: explicitly scale down before pixel analysis
+            image = image.resize((160, 160))
             
             # Analyze image characteristics
             severity_score = await self._analyze_severity(image)
+            
+            # Cleanup
+            image.close()
+            import gc
+            gc.collect()
             
             # Determine severity level
             if severity_score >= 8:
@@ -93,8 +100,11 @@ class SeverityDetector:
             if color_diversity > 0.3:
                 score += 1
             
-            # Clamp score to 0-10
-            score = min(10, max(0, score))
+            
+            import gc
+            del pixels
+            del brightness_values
+            gc.collect()
             
         except Exception as e:
             print(f"Error in severity analysis: {e}")

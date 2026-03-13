@@ -1,277 +1,231 @@
-You are enhancing the Smart College Damage Reporting System with several UI improvements and a Smart Issue Radar widget.
+Implement an automated Email Alert System in the Smart College Damage Reporting System.
 
-IMPORTANT REQUIREMENT:
-The system is already fully functional. You must NOT modify or break any existing backend logic, API routes, ML pipeline, complaint creation flow, or dashboard functionality.
+IMPORTANT REQUIREMENT
 
-All new features must be implemented as **non-invasive extensions** that only read existing data from MongoDB and display it in the UI.
+The system is already stable and fully functional. Do NOT modify or break any existing backend logic, ML pipelines, complaint creation routes, database schemas, or UI components.
 
-Do NOT refactor existing components or change current data structures.
+All alert functionality must be implemented as a **separate modular email service** that runs alongside the current system.
 
 ---
 
-FEATURE 1 — DISPLAY SEVERITY IN UI
+PLATFORM
 
-Severity is already produced by the ML pipeline and stored with each complaint.
+Use the existing Nodemailer + Gmail SMTP setup already configured in the project.
 
-Add severity display in the following places:
+Environment variables already available:
 
-1. Admin Dashboard complaint table
-   Add a "Severity" column.
+EMAIL_USER
+EMAIL_PASS
+FRONTEND_URL
+
+---
+
+CREATE EMAIL SERVICE
+
+Create a new service:
+
+backend/services/emailNotifier.js
+
+Responsibilities:
+
+• Initialize Nodemailer transporter
+• Format email messages
+• Send alerts to supervisors
+• Attach complaint images
+• Include dashboard link
+
+---
+
+SUPERVISOR EMAIL CONFIG
+
+Create a configuration file:
+
+backend/config/supervisorEmails.js
 
 Example:
 
-Complaint | Category | Severity | Priority | Deadline | Status
+const SUPERVISOR_EMAILS = {
+electrical: "[electrical_supervisor@email.com](mailto:electrical_supervisor@email.com)",
+plumbing: "[plumbing_supervisor@email.com](mailto:plumbing_supervisor@email.com)",
+infrastructure: "[infrastructure_supervisor@email.com](mailto:infrastructure_supervisor@email.com)"
+};
 
-2. Supervisor Dashboard complaint table
-   Add the same "Severity" column.
+module.exports = SUPERVISOR_EMAILS;
 
-3. Complaint Detail View
-   Display severity inside the AI Assessment section.
-
-Example:
-
-## AI Assessment
-
-Category: Pipe
-Severity: Severe
-Priority: High
+This allows easy updates without modifying logic.
 
 ---
 
-SEVERITY BADGE DESIGN
+ALERT TRIGGERS
 
-Severity should appear as a colored badge.
-
-Minor → green
-Moderate → yellow
-Severe → orange
-Hazardous → red
-
-Example UI:
-
-[Severe]
-
-Do not change existing priority badges.
+The system must send email alerts for three situations.
 
 ---
 
-FEATURE 2 — PRIORITY BASED DEADLINES
+1. HIGH PRIORITY COMPLAINT CREATED
 
-Currently deadlines use a fixed 3-day resolution time.
+When a complaint is created and priority === "High":
 
-Update SLA calculation so deadlines depend on complaint priority.
+Immediately send an email to the appropriate supervisor.
 
-Priority → Deadline
+Subject:
 
-High → 1 day
-Medium → 3 days
-Low → 5 days
+🚨 High Priority Infrastructure Issue
 
-Backend implementation:
+Email Body Example:
 
-Create a constant mapping:
+High Priority Complaint Reported
 
-backend/constants/slaRules.js
+Category: Electrical
+Severity: Hazardous
+Location: CSE-A / F001
 
-Example:
+Complaint ID: #143
 
-export const SLA_BY_PRIORITY = {
-High: 1,
-Medium: 3,
-Low: 5
-}
+Immediate attention required.
 
-When a complaint is created:
+View complaint:
+${FRONTEND_URL}/complaints/{complaintId}
 
-1. Read complaint priority
-2. Get SLA days from the mapping
-3. Calculate deadline from createdAt
-
-Example logic:
-
-slaDays = SLA_BY_PRIORITY[priority]
-
-deadline = createdAt + slaDays
-
-Store these additional fields in MongoDB:
-
-slaDays
-slaDeadline
-
-Do not modify any existing complaint fields.
+Attach the complaint image if available.
 
 ---
 
-FEATURE 3 — DEADLINE VISIBILITY
+2. DEADLINE APPROACHING (DUE SOON)
 
-Users must see deadlines for transparency.
+If the complaint deadline is approaching.
 
-Supervisors must see deadlines for task management.
+Condition:
 
-Add deadline display in:
+deadline - current time < 12 hours
 
-User Dashboard
-Supervisor Dashboard
-Admin Dashboard complaint table
+Send reminder email.
 
-Example:
+Subject:
 
-Resolution Deadline: Mar 15
+⚠ SLA Deadline Approaching
 
-Optional display:
+Email Body Example:
 
-Mar 15 (2 days left)
+Reminder: Complaint nearing SLA deadline
+
+Complaint: #143
+Category: Pipe Leak
+Location: CSE-A
+
+Deadline: Today
+
+Please resolve before the deadline.
+
+Dashboard link:
+${FRONTEND_URL}/complaints/{complaintId}
 
 ---
 
-FEATURE 4 — OVERDUE INDICATOR
+3. OVERDUE COMPLAINT
 
 If:
 
-currentDate > slaDeadline
+current time > slaDeadline
 AND complaint status != "Resolved"
 
-Show badge:
+Send urgent alert email.
 
-⚠ Overdue
+Subject:
 
-This must be calculated dynamically without modifying stored complaint data.
+🚨 Complaint Overdue
 
----
+Email Body Example:
 
-FEATURE 5 — COMPLAINT IMAGE PREVIEW
+Urgent: Complaint has exceeded SLA deadline
 
-Improve complaint list UI by showing a small image thumbnail.
+Complaint: #143
+Category: Electrical
+Location: CSE-A
 
-Add a small preview image in complaint tables.
+Deadline exceeded.
 
-Example layout:
+Immediate action required.
 
-[thumbnail] Bench Damage | Block CSE-A | Status: Open
-
-Thumbnail size:
-
-40–50px square with rounded corners.
-
-Do not modify existing image upload logic.
+Dashboard link:
+${FRONTEND_URL}/complaints/{complaintId}
 
 ---
 
-FEATURE 6 — STATUS PROGRESS TRACKER
+IMAGE ATTACHMENT
 
-Convert complaint status history into a visual progress tracker.
+If a complaint image exists:
+
+Attach the image in the email or include it as a preview link.
+
+---
+
+CRON JOB FOR MONITORING
+
+Create:
+
+backend/cron/emailCron.js
+
+Use node-cron.
+
+Run every 30 minutes to check unresolved complaints.
+
+Steps:
+
+1. Query complaints where status !== "Resolved"
+2. Check if deadline approaching (<12 hours)
+3. Check if overdue
+4. Send appropriate email alert
+
+---
+
+HIGH PRIORITY TRIGGER
+
+Modify the complaint creation controller.
+
+After complaint.save() and after sending the API response:
+
+Add a fire-and-forget email alert.
 
 Example:
 
-Submitted ✔
-In Progress ✔
-Resolved ○
+if (complaint.priority === "High") {
+const { sendHighPriorityEmail } = require("../services/emailNotifier");
+sendHighPriorityEmail(complaint).catch(err => console.error("Email alert error:", err.message));
+}
 
-Use the existing statusHistory data already stored in complaints.
-
-Do not modify how status updates are stored.
-
----
-
-FEATURE 7 — URGENT ISSUES WIDGET
-
-Add a small dashboard widget for urgent issues.
-
-Widget title:
-
-🚨 Urgent Issues
-
-Logic:
-
-Count complaints where:
-
-priority = "High"
-status != "Resolved"
-
-Example display:
-
-3 High Priority Complaints need attention
-
-This should appear at the top of the Admin Dashboard.
+This must NOT block the complaint creation response.
 
 ---
 
-FEATURE 8 — SMART ISSUE RADAR
+ERROR HANDLING
 
-Add a new dashboard widget called:
+If email sending fails:
 
-Smart Issue Radar
-
-Purpose:
-
-Show which campus blocks currently have the most urgent complaints.
-
-Implementation must use a MongoDB aggregation query.
-
-Aggregation logic:
-
-1. Filter complaints where status != "Resolved"
-2. Group complaints by block
-3. Count High / Medium / Low priority complaints per block
-
-Example aggregation output:
-
-[
-{ block: "CSE-A", high: 3, medium: 1, low: 0 },
-{ block: "ECE-B", high: 1, medium: 2, low: 1 }
-]
-
-UI example:
-
-Smart Issue Radar
-
-🔴 CSE-A Block
-3 High Priority Issues
-
-🟠 ECE-B Block
-2 Medium Priority Issues
-
-🟢 MECH-C Block
-1 Low Priority Issue
-
-If any complaint in a block is overdue:
-
-Highlight the block with an alert indicator.
-
-Example:
-
-🚨 CSE-A Block
-2 Overdue Issues
+• Log the error
+• Do NOT interrupt the complaint creation process
+• The system must continue operating normally
 
 ---
 
-IMPLEMENTATION RULES
+TESTING
 
-Do not modify:
+Test with the three supervisor email addresses already configured.
 
-ML server logic
-Complaint submission flow
-Existing API routes
-Authentication system
-Existing dashboards
+Verify that:
 
-All features must only:
-
-Read existing complaint data
-Add UI indicators and widgets
-Add SLA deadline calculation
+• High priority complaints trigger email alerts
+• Due soon reminders send correctly
+• Overdue complaints trigger urgent alerts
 
 ---
 
 FINAL GOAL
 
-Enhance the system with:
+Create an automated alert system where supervisors receive email notifications when:
 
-Severity visibility
-Priority-based SLA deadlines
-Image previews
-Status progress tracking
-Urgent issues monitoring
-Smart Issue Radar
+• High priority complaints are created
+• SLA deadlines are approaching
+• Complaints become overdue
 
-while keeping the current system stable and unchanged.
+Emails must include complaint details, image preview, and a direct dashboard link.

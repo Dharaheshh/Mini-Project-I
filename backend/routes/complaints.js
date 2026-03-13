@@ -193,6 +193,12 @@ router.post(
       }
 
       res.status(201).json(complaint);
+
+      // 🔔 Fire-and-forget: Send email alert if High Priority
+      if (complaint.priority === 'High') {
+        const { sendHighPriorityEmail } = require('../services/emailNotifier');
+        sendHighPriorityEmail(complaint).catch(err => console.error('📧 Email alert error:', err.message));
+      }
     } catch (error) {
       console.error('Create complaint error:', error);
       res.status(500).json({ message: 'Server error', error: error.message });

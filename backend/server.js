@@ -60,6 +60,10 @@ mongoose
   })
   .then(() => {
     console.log('✅ MongoDB Connected');
+
+    // Start the email alert cron job
+    const { startEmailCron } = require('./cron/emailCron');
+    startEmailCron();
   })
   .catch((err) => {
     console.error('❌ MongoDB Error:', err.message);

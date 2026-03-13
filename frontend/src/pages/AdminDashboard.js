@@ -352,7 +352,7 @@ const AdminDashboard = () => {
                 </tr>
               ) : (
                 complaints.map((complaint) => (
-                  <tr key={complaint._id} className="hover:bg-slate-50/80 transition-colors group">
+                  <tr key={complaint._id} className={`hover:bg-slate-50/80 transition-colors group ${complaint.duplicate ? 'bg-orange-50/60' : ''}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 shadow-sm relative group-hover:scale-105 transition-transform">
@@ -368,7 +368,15 @@ const AdminDashboard = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant="neutral">{complaint.category}</Badge>
+                      <div className="flex flex-col gap-1 items-start">
+                        <Badge variant="neutral">{complaint.category}</Badge>
+                        {complaint.duplicate && (
+                          <Badge variant="danger" className="bg-orange-100 text-orange-700 text-[10px] px-1.5 py-0.5 border-orange-200 shadow-sm flex items-center gap-1">
+                            <AlertTriangle size={10} />
+                            Duplicate Report
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {complaint.location}

@@ -5,6 +5,7 @@ const { body, validationResult } = require('express-validator');
 const Complaint = require('../models/Complaint');
 const { auth } = require('../middleware/auth');
 const mlService = require('../services/mlService');
+const { calculateSLA } = require('../constants/slaRules');
 
 const router = express.Router();
 
@@ -53,23 +54,53 @@ router.post(
         return res.status(400).json({ message: 'Image is required' });
       }
 
-      // Get existing complaint image URLs for duplicate detection
-      const existingComplaints = await Complaint.find({}).select('image.url').limit(50);
-      const existingImageUrls = existingComplaints.map(c => c.image.url);
+      // Extract metadata for duplicate detection
+      const location = req.body.location; 
+      const classroom = req.body.classroom;
+      
+      // Stage 1: Metadata Filtering 
+      // Query database for recent unresolved complaints in the same location/classroom
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const candidateQuery = {
+        createdAt: { $gte: sevenDaysAgo },
+        status: { $ne: 'Resolved' },
+        location: location
+      };
+      
+      if (classroom) {
+          candidateQuery.classroom = classroom;
+      }
+      
+      // We limit to 20 to prevent enormous payloads
+      const existingComplaints = await Complaint.find(candidateQuery)
+                                                .select('_id image.url category')
+                                                .limit(20);
+                                                
+      // Format mapped candidates for the ML Server
+      // Sending { id, image_url } array
+      const candidates = existingComplaints.map(c => ({
+          complaint_id: c._id.toString(),
+          image_url: c.image.url
+      }));
 
       // Get ML predictions (category, priority, severity, description, duplicate)
       const mlPredictions = await mlService.getAllPredictions(
         req.file.buffer,
         req.body.note || '',
-        existingImageUrls
+        candidates
       );
 
       // Check for duplicate
-      if (mlPredictions.duplicate?.is_duplicate) {
-        return res.status(400).json({
-          message: 'This appears to be a duplicate complaint',
-          duplicate: mlPredictions.duplicate,
-        });
+      // ML server returns: { "duplicate": true/false, "duplicate_reference": "complaint_id" }
+      let isDuplicate = false;
+      let duplicateReference = null;
+      
+      if (mlPredictions.duplicate === true) {
+        isDuplicate = true;
+        duplicateReference = mlPredictions.duplicate_reference || null;
+        console.log(`🔁 DUPLICATE DETECTED — Reference: ${duplicateReference}`);
       }
 
       // Upload image to Cloudinary
@@ -105,6 +136,10 @@ router.post(
       const assignedDepartment = categoryMap[category] || 'infrastructure'; // Default safety fallback
       const note = req.body.note || mlPredictions.description || '';
 
+      // Calculate SLA deadline based on severity
+      const { slaDays, slaDeadline } = calculateSLA(new Date(), severity);
+      console.log(`📅 SLA: ${slaDays} day(s) — Deadline: ${slaDeadline.toISOString()}`);
+
       // Create complaint
       const complaint = new Complaint({
         user: req.user._id,
@@ -120,6 +155,10 @@ router.post(
         severity: severity,
         assignedDepartment: assignedDepartment,
         status: 'Submitted',
+        duplicate: isDuplicate,
+        duplicateReference: duplicateReference,
+        slaDays: slaDays,
+        slaDeadline: slaDeadline,
         statusHistory: [{ status: 'Submitted' }],
       });
 

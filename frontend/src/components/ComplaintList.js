@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
-import { MapPin, Calendar, Clock, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
 
 const ComplaintList = ({ complaints }) => {
   if (!complaints || complaints.length === 0) {
@@ -58,6 +58,22 @@ const ComplaintList = ({ complaints }) => {
                 </span>
               </div>
             </div>
+
+            {complaint.slaDeadline && (
+              <div className="flex items-center justify-between text-xs border-t border-slate-50 pt-2 pb-1 mb-1">
+                <span className="text-slate-400 flex items-center"><Clock size={12} className="mr-1" /> Deadline:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-slate-700">{new Date(complaint.slaDeadline).toLocaleDateString()}</span>
+                  {(() => {
+                    const diffDays = Math.ceil((new Date(complaint.slaDeadline) - new Date()) / (1000 * 60 * 60 * 24));
+                    const isResolved = complaint.status === 'Resolved';
+                    if (diffDays < 0 && !isResolved) return <span className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5"><AlertTriangle size={9} />Overdue</span>;
+                    if (diffDays >= 0 && diffDays <= 1 && !isResolved) return <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Due Soon</span>;
+                    return null;
+                  })()}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <Badge variant={

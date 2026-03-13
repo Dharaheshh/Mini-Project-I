@@ -22,8 +22,8 @@ class MLService {
       if (note) {
         formData.append('note', note);
       }
-      if (existingImageUrls.length > 0) {
-        formData.append('existing_images', JSON.stringify(existingImageUrls));
+      if (existingImageUrls && existingImageUrls.length > 0) {
+        formData.append('candidates', JSON.stringify(existingImageUrls));
       }
 
       const response = await axios.post(

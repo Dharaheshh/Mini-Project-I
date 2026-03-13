@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { complaintsAPI } from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const ComplaintDetails = () => {
     const { id } = useParams();
@@ -59,6 +60,24 @@ const ComplaintDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Main Details (Left) */}
                 <div className="md:col-span-2 space-y-6">
+                    {/* Duplicate Banner */}
+                    {complaint.duplicate && (
+                        <div className="bg-orange-50 border-l-4 border-orange-400 rounded-xl p-4 flex items-start shadow-md">
+                            <AlertCircle className="text-orange-500 mr-3 mt-0.5 flex-shrink-0" size={22} />
+                            <div>
+                                <h4 className="text-orange-800 font-bold text-sm">⚠️ Possible Duplicate Report</h4>
+                                <p className="text-orange-700 text-sm mt-1">
+                                    Our AI detected this issue might have been previously reported.
+                                    {complaint.duplicateReference && (
+                                        <Link to={`/complaints/${complaint.duplicateReference}`} className="ml-1 inline-flex items-center gap-1 font-semibold text-orange-900 underline decoration-orange-400 hover:text-orange-950 hover:decoration-2 transition-all">
+                                            View original Complaint #{complaint.duplicateReference.substring(complaint.duplicateReference.length - 6)} →
+                                        </Link>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <Card className="p-0 overflow-hidden border-0 shadow-lg group">
                         <div className="h-80 relative bg-slate-100 flex items-center justify-center">
                             {complaint.image?.url ? (
@@ -143,6 +162,23 @@ const ComplaintDetails = () => {
                                     {complaint.status}
                                 </Badge>
                             </div>
+                            {complaint.slaDeadline && (
+                                <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                                    <span className="flex items-center"><Clock size={14} className="mr-2 text-slate-400" /> Resolution Deadline</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-slate-900">{new Date(complaint.slaDeadline).toLocaleDateString()}</span>
+                                        {(() => {
+                                            const now = new Date();
+                                            const deadline = new Date(complaint.slaDeadline);
+                                            const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                                            const isResolved = complaint.status === 'Resolved';
+                                            if (diffDays < 0 && !isResolved) return <Badge variant="danger" className="text-[10px] px-1.5 py-0">Overdue</Badge>;
+                                            if (diffDays >= 0 && diffDays <= 1 && !isResolved) return <Badge variant="warning" className="text-[10px] px-1.5 py-0">Due Soon</Badge>;
+                                            return null;
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
                 </div>

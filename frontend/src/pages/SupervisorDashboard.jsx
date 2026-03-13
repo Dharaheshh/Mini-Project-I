@@ -7,7 +7,8 @@ import {
     CheckCircle,
     Clock,
     ClipboardList,
-    AlertCircle
+    AlertCircle,
+    AlertTriangle
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
@@ -166,6 +167,7 @@ const SupervisorDashboard = () => {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Category</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Location</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Priority</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Deadline</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">State</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Action Handler</th>
                             </tr>
@@ -173,13 +175,13 @@ const SupervisorDashboard = () => {
                         <tbody className="divide-y divide-slate-700">
                             {complaints.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-medium">
+                                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 font-medium">
                                         No active work orders matched your filters.
                                     </td>
                                 </tr>
                             ) : (
                                 complaints.map((complaint) => (
-                                    <tr key={complaint._id} className="hover:bg-slate-700/30 transition-colors">
+                                    <tr key={complaint._id} className={`hover:bg-slate-700/30 transition-colors ${complaint.duplicate ? 'bg-orange-900/20 border-l-2 border-l-orange-500' : ''}`}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-700 shadow-md">
@@ -195,7 +197,15 @@ const SupervisorDashboard = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <Badge variant="neutral" className="bg-slate-700 text-slate-200 border-0">{complaint.category}</Badge>
+                                            <div className="flex flex-col gap-1 items-start">
+                                                <Badge variant="neutral" className="bg-slate-700 text-slate-200 border-0">{complaint.category}</Badge>
+                                                {complaint.duplicate && (
+                                                    <Badge variant="danger" className="bg-orange-900/30 text-orange-400 text-[10px] px-1.5 py-0.5 border-orange-700/50 shadow-sm flex items-center gap-1">
+                                                        <AlertTriangle size={10} />
+                                                        Duplicate Report
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm text-slate-300 font-medium">{complaint.location}</div>
@@ -208,6 +218,24 @@ const SupervisorDashboard = () => {
                                             }>
                                                 {complaint.priority}
                                             </Badge>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {complaint.slaDeadline ? (() => {
+                                                const now = new Date();
+                                                const deadline = new Date(complaint.slaDeadline);
+                                                const diffMs = deadline - now;
+                                                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                                const isResolved = complaint.status === 'Resolved';
+                                                const isOverdue = diffDays < 0 && !isResolved;
+                                                const isDueSoon = diffDays >= 0 && diffDays <= 1 && !isResolved;
+                                                return (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs text-slate-300">{deadline.toLocaleDateString()}</span>
+                                                        {isOverdue && <Badge variant="danger" className="bg-red-900/40 text-red-400 border-red-800/50 text-[10px] px-1.5 py-0">Overdue</Badge>}
+                                                        {isDueSoon && <Badge variant="warning" className="bg-yellow-900/30 text-yellow-400 border-yellow-700/50 text-[10px] px-1.5 py-0">Due Soon</Badge>}
+                                                    </div>
+                                                );
+                                            })() : <span className="text-xs text-slate-500">—</span>}
                                         </td>
                                         <td className="px-6 py-4">
                                             <Badge variant={

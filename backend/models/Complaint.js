@@ -58,6 +58,20 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    duplicate: {
+      type: Boolean,
+      default: false,
+    },
+    duplicateReference: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Complaint',
+    },
+    slaDays: {
+      type: Number,
+    },
+    slaDeadline: {
+      type: Date,
+    },
     statusHistory: [
       {
         status: { type: String },

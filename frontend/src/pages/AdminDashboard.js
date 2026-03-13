@@ -36,6 +36,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { StatsCard } from '../components/ui/StatsCard';
+import { Select } from '../components/ui/Select';
 
 const AdminDashboard = () => {
   const [complaints, setComplaints] = useState([]);
@@ -279,16 +280,13 @@ const AdminDashboard = () => {
       {/* Smart Radar & Urgent Issues Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Urgent Issues Widget */}
-        <Card className="lg:col-span-1 bg-gradient-to-br from-red-50 to-white flex md:flex-row lg:flex-col justify-center items-center p-8 text-center relative overflow-hidden ring-1 ring-red-100/50 shadow-sm hover:shadow-md transition-shadow">
-          <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
-          <AlertTriangle size={48} className="text-red-500 mb-4 animate-[bounce_2s_infinite]" />
-          <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-1">🚨 Urgent Issues</h3>
-            <p className="text-slate-600 flex flex-col items-center">
-              <strong className="text-4xl font-extrabold text-red-600 my-2">{urgentIssuesCount}</strong>
-              <span className="text-sm font-medium">High Priority Complaints<br/>need attention</span>
-            </p>
+        <Card className="lg:col-span-1 flex flex-col justify-center items-center p-8 text-center border-red-100 hover:shadow-lg transition-all duration-300">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-red-50 border border-red-100 mb-4">
+            <AlertTriangle size={22} className="text-red-500" />
           </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-1">Urgent Issues</h3>
+          <strong className="text-5xl font-black text-red-600 my-3">{urgentIssuesCount}</strong>
+          <p className="text-sm font-medium text-slate-500">High Priority Complaints<br/>need attention</p>
         </Card>
 
         {/* Smart Issue Radar Widget */}
@@ -443,34 +441,36 @@ const AdminDashboard = () => {
                 className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
               />
             </div>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-            >
-              <option value="">All Statuses</option>
-              <option value="Submitted">Pending</option>
-              <option value="In-Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
-            </select>
+            <div className="w-48">
+              <Select
+                value={filters.status}
+                onChange={(val) => handleFilterChange('status', val)}
+                options={[
+                  { value: '', label: 'All Statuses' },
+                  { value: 'Submitted', label: 'Pending' },
+                  { value: 'In-Progress', label: 'In Progress' },
+                  { value: 'Resolved', label: 'Resolved' }
+                ]}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/60 shadow-sm bg-white/60 backdrop-blur-md">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50/80 backdrop-blur-md border-b border-slate-200/80">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Issue</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Severity</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Deadline</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Issue</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Severity</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Deadline</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-slate-100/50">
               {complaints.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-6 py-12 text-center text-slate-400">
@@ -596,15 +596,17 @@ const AdminDashboard = () => {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-3 items-center mt-3 border-none opacity-80 group-hover:opacity-100 transition-opacity">
-                      <select
-                        value={complaint.status}
-                        onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
-                        className="text-xs border-slate-200 text-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 py-1.5 px-2 bg-white shadow-sm cursor-pointer hover:border-primary-300 transition-colors"
-                      >
-                        <option value="Submitted">Pending</option>
-                        <option value="In-Progress">In Progress</option>
-                        <option value="Resolved">Resolved</option>
-                      </select>
+                      <div className="w-36">
+                        <Select
+                          value={complaint.status}
+                          onChange={(val) => handleStatusChange(complaint._id, val)}
+                          options={[
+                            { value: 'Submitted', label: 'Pending' },
+                            { value: 'In-Progress', label: 'In Progress' },
+                            { value: 'Resolved', label: 'Resolved' }
+                          ]}
+                        />
+                      </div>
                       <Link to={`/complaints/${complaint._id}`} className="text-slate-400 hover:text-primary-600 p-1 hover:bg-primary-50 rounded-full transition-colors">
                         <MoreVertical size={16} />
                       </Link>
@@ -660,33 +662,33 @@ const AdminDashboard = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Category</label>
-                <select
+                <Select
                   value={filters.category}
-                  onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                >
-                  <option value="">All Categories</option>
-                  <option value="Chair">Chair</option>
-                  <option value="Bench">Bench</option>
-                  <option value="Projector">Projector</option>
-                  <option value="Socket">Socket</option>
-                  <option value="Pipe">Pipe</option>
-                  <option value="Other">Other</option>
-                </select>
+                  onChange={(val) => handleFilterChange('category', val)}
+                  options={[
+                    { value: '', label: 'All Categories' },
+                    { value: 'Chair', label: 'Chair' },
+                    { value: 'Bench', label: 'Bench' },
+                    { value: 'Projector', label: 'Projector' },
+                    { value: 'Socket', label: 'Socket' },
+                    { value: 'Pipe', label: 'Pipe' },
+                    { value: 'Other', label: 'Other' }
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">Priority</label>
-                <select
+                <Select
                   value={filters.priority}
-                  onChange={(e) => handleFilterChange('priority', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                >
-                  <option value="">All Priorities</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
+                  onChange={(val) => handleFilterChange('priority', val)}
+                  options={[
+                    { value: '', label: 'All Priorities' },
+                    { value: 'High', label: 'High' },
+                    { value: 'Medium', label: 'Medium' },
+                    { value: 'Low', label: 'Low' }
+                  ]}
+                />
               </div>
             </div>
 

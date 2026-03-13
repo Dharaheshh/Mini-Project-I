@@ -60,10 +60,10 @@ const NotificationDropdown = () => {
 
     const getIcon = (type) => {
         switch (type) {
-            case 'success': return <CheckCircle size={16} className="text-green-500" />;
-            case 'warning': return <AlertTriangle size={16} className="text-amber-500" />;
-            case 'error': return <AlertTriangle size={16} className="text-red-500" />;
-            default: return <Info size={16} className="text-blue-500" />;
+            case 'success': return <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600"><CheckCircle size={14} /></div>;
+            case 'warning': return <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600"><AlertTriangle size={14} /></div>;
+            case 'error': return <div className="p-1.5 rounded-lg bg-red-50 text-red-600"><AlertTriangle size={14} /></div>;
+            default: return <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><Info size={14} /></div>;
         }
     };
 
@@ -82,9 +82,9 @@ const NotificationDropdown = () => {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-fade-in origin-top-right">
-                    <div className="px-4 py-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-semibold text-sm text-slate-800">Notifications</h3>
+                <div className="absolute right-0 mt-2 w-80 bg-white/90 backdrop-blur-xl rounded-xl shadow-md border border-slate-200 overflow-hidden z-50 animate-fade-in origin-top-right">
+                    <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-md">
+                        <h3 className="font-bold text-sm text-slate-800">Notifications</h3>
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllRead}
@@ -107,21 +107,32 @@ const NotificationDropdown = () => {
                                 <div
                                     key={notification._id}
                                     className={cn(
-                                        "px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-3",
-                                        !notification.read ? "bg-blue-50/30" : ""
+                                        "px-4 py-3 border-b border-slate-100/50 group hover:bg-slate-50 transition-colors flex gap-3 cursor-pointer",
+                                        !notification.read ? "bg-blue-50/20" : ""
                                     )}
                                     onClick={() => !notification.read && markAsRead(notification._id)}
                                 >
-                                    <div className="mt-1 flex-shrink-0">
+                                    <div className="flex-shrink-0">
                                         {getIcon(notification.type)}
                                     </div>
                                     <div className="flex-1">
-                                        <p className={cn("text-sm text-slate-800", !notification.read && "font-medium")}>
+                                        <p className={cn("text-sm text-slate-800", !notification.read && "font-bold")}>
                                             {notification.message}
                                         </p>
-                                        <span className="text-xs text-slate-400 block mt-1">
-                                            {new Date(notification.createdAt).toLocaleDateString()}
-                                        </span>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className="text-xs font-semibold text-slate-400">
+                                                {new Date(notification.createdAt).toLocaleDateString()}
+                                            </span>
+                                            {notification.complaint && (
+                                                <Link 
+                                                    to={`/complaints/${notification.complaint}`}
+                                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
+                                                >
+                                                    View complaint →
+                                                </Link>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))

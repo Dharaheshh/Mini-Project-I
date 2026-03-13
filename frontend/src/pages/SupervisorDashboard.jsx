@@ -18,19 +18,15 @@ import { useAuthStore } from '../store/authStore';
 
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Select } from '../components/ui/Select';
 
 const StatsCardDark = ({ title, value, icon: Icon, colorClass }) => (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg relative overflow-hidden group">
-        <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 blur-2xl transition-all group-hover:blur-3xl group-hover:opacity-20 ${colorClass}`} />
-        <div className="flex justify-between items-start relative z-10">
-            <div>
-                <p className="text-slate-400 font-medium text-sm mb-1">{title}</p>
-                <h3 className="text-3xl font-black text-white">{value}</h3>
-            </div>
-            <div className={`p-3 rounded-lg bg-slate-900/50 ${colorClass} text-opacity-100`}>
-                <Icon size={24} className="text-white" />
-            </div>
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-md flex flex-col group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+        <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-4 bg-slate-900/50 ${colorClass} text-opacity-100 transition-transform duration-300 group-hover:scale-110`}>
+            <Icon size={20} className="text-white" />
         </div>
+        <p className="text-slate-400 font-medium text-sm mb-1">{title}</p>
+        <h3 className="text-3xl font-black text-white">{value}</h3>
     </div>
 );
 
@@ -176,9 +172,9 @@ const SupervisorDashboard = () => {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-900/50 border-b border-slate-700">
+                <div className="overflow-x-auto rounded-xl border border-slate-700/60 shadow-lg bg-slate-800/80 backdrop-blur-xl">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-900/60 backdrop-blur-md border-b border-slate-700/80">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Report</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Category</th>
@@ -190,7 +186,7 @@ const SupervisorDashboard = () => {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Action Handler</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-700">
+                        <tbody className="divide-y divide-slate-700/50">
                             {complaints.length === 0 ? (
                                 <tr>
                                     <td colSpan="8" className="px-6 py-12 text-center text-slate-500 font-medium">
@@ -314,19 +310,17 @@ const SupervisorDashboard = () => {
                                                         </Badge>
                                                     </td>
                                                     <td className="px-6 py-5 text-right flex justify-end gap-3 items-center mt-2 border-none">
-                                                        <select
-                                                            value={complaint.status}
-                                                            onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
-                                                            className={`text-xs font-bold rounded-lg focus:ring-2 focus:ring-blue-500 py-2 px-3 shadow-inner cursor-pointer transition-colors border-0
-                                                                ${complaint.status === 'Resolved' ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' :
-                                                                    complaint.status === 'In-Progress' ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' :
-                                                                        'bg-slate-700 text-white hover:bg-slate-600'
-                                                                }`}
-                                                        >
-                                                            <option value="Submitted">Mark Pending</option>
-                                                            <option value="In-Progress">Start Job</option>
-                                                            <option value="Resolved">Complete Issue</option>
-                                                        </select>
+                                                        <div className="w-40">
+                                                            <Select
+                                                                value={complaint.status}
+                                                                onChange={(val) => handleStatusChange(complaint._id, val)}
+                                                                options={[
+                                                                    { value: 'Submitted', label: 'Mark Pending' },
+                                                                    { value: 'In-Progress', label: 'Start Job' },
+                                                                    { value: 'Resolved', label: 'Complete Issue' }
+                                                                ]}
+                                                            />
+                                                        </div>
                                                         <Link to={`/complaints/${complaint._id}`} className="text-slate-500 hover:text-white p-2 rounded max-w-max hover:bg-slate-700 transition">
                                                             <MoreVertical size={18} />
                                                         </Link>

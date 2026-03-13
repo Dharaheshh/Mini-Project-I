@@ -1,188 +1,201 @@
-Perform a **complete frontend UI/UX overhaul** of the Smart College Damage Reporting System.
+Perform a **complete frontend visual transformation** of the Smart College Damage Reporting System.
 
-IMPORTANT RULES
+IMPORTANT
 
-This task is **STRICTLY UI / UX only**.
+This is a **pure UI/UX redesign task**.
 
 DO NOT modify:
 
 * backend APIs
-* business logic
-* routing
 * database schema
-* ML integrations
+* ML logic
 * complaint workflows
+* routing logic
 
-All functionality must remain identical.
+The system functionality must remain **100% unchanged**.
 
-The goal is to **transform the UI into a modern SaaS-level dashboard using the existing Login Page design language as the visual reference.**
-
----
-
-GLOBAL DESIGN SYSTEM
-
-Use the **Login Page theme as the primary design language** across the entire application.
-
-The login page already uses a modern gradient SaaS design.
-
-Replicate that aesthetic everywhere.
-
-Key style elements:
-
-• soft gradient backgrounds
-• glassmorphism style cards
-• modern shadows
-• rounded corners
-• smooth hover animations
-• consistent icon usage
-• better spacing and typography
-
-Create a **consistent design system** for:
-
-Cards
-Buttons
-Dropdowns
-Tables
-Badges
-Forms
-Filters
-Navigation
+Only redesign the **visual layer**.
 
 ---
 
-COLOR SYSTEM
+# DESIGN DIRECTION
 
-Follow the login page palette.
+Use the **Login Page design as the visual foundation for the entire application**.
 
-Primary gradient:
+The login page already has a modern SaaS aesthetic with:
 
-Deep blue → teal gradient
+* dark blue gradient
+* soft shadows
+* rounded cards
+* modern typography
+* smooth buttons
 
-Example:
+Apply this **same design language consistently across the entire dashboard**.
 
-linear-gradient(135deg, #0f172a, #1e3a8a, #0891b2)
-
-Use this gradient for:
-
-buttons
-primary highlights
-header accents
-
-Status colors:
-
-High Priority → Red
-Medium Priority → Orange
-Low Priority → Green
-
-SLA status colors:
-
-Safe → Green
-Due Soon → Amber
-Overdue → Red
+The goal is to make the whole system feel like **one coherent product**, not separate screens.
 
 ---
 
-GLOBAL CARD STYLE
+# REMOVE PURPLE DESIGN SYSTEM
 
-All dashboard elements should use a unified card design.
+Currently the UI still uses many **purple theme elements**.
 
-Card styling:
+Remove all purple-based color styling.
+
+Replace it with the **login page blue/teal gradient palette**.
+
+Primary theme colors:
+
+Deep Blue
+Teal
+Slate Gray
+
+Priority colors remain:
+
+High → Red
+Medium → Orange
+Low → Green
+
+---
+
+# REMOVE MEANINGLESS ICON BACKGROUND CIRCLES
+
+Some dashboard widgets contain **large faded circular shapes behind icons**.
+
+These circles add no meaning and create visual clutter.
+
+Remove these circular decorations.
+
+Instead use:
+
+clean icon containers
+subtle gradient backgrounds
+small rounded icon boxes
+
+Example improvement:
+
+Instead of:
+
+large faded circle behind icon
+
+Use:
+
+small rounded square icon container.
+
+---
+
+# DASHBOARD CARD REDESIGN
+
+Redesign dashboard statistic cards.
+
+Current cards look inconsistent.
+
+New design:
+
+clean rounded cards
+subtle gradient border or icon background
+balanced spacing
+larger number emphasis
+
+Example layout:
+
+Icon
+Title
+Metric value
+Trend indicator
+
+Add subtle hover elevation.
+
+---
+
+# ENSURE DASHBOARD WIDGETS SHOW REAL DATA
+
+Some widgets such as the **heatmap statistics cards above the map** appear without values.
+
+Ensure all metric cards correctly display their values using existing frontend state data.
+
+Examples:
+
+Total Issues
+High Priority
+Pending
+Resolved
+
+Do not change backend logic.
+
+Only fix the UI so values appear properly.
+
+---
+
+# GLOBAL CARD SYSTEM
+
+Create a unified card style used everywhere:
+
+dashboard cards
+report cards
+heatmap container
+notification panels
+
+Card style:
 
 rounded-xl
-shadow-lg
-backdrop blur (glass effect)
-soft border
-
-Example visual feel:
-
-modern SaaS dashboard like:
-
-Stripe
-Linear
-Vercel
-Supabase
-
----
-
-DROPDOWN COMPONENT REDESIGN
-
-Current dropdowns look like basic browser elements.
-
-Replace them with modern styled dropdown components.
-
-Improvements required:
-
-rounded menus
-hover highlights
-smooth open animation
-soft shadows
+shadow-md
+border-slate-200
 consistent padding
 
-Example options:
-
-🏫 A Block
-🏫 B Block
-📚 Library
-🏠 Boys Hostel
-
-Dropdown should match the login page visual style.
+Use subtle hover animation.
 
 ---
 
-BUTTON SYSTEM
+# DROPDOWN REDESIGN
 
-Create a consistent button style across the application.
+Current dropdowns look like basic browser components.
 
-Primary buttons:
+Replace them with styled dropdowns that match the login page theme.
 
-gradient background
-rounded-lg
-hover glow
-smooth animation
+Requirements:
 
-Example hover:
+rounded menus
+soft shadows
+smooth open animation
+hover highlight
 
-scale slightly
-shadow increases
+Remove default browser appearance.
 
-Use consistent button sizes.
+Ensure consistent padding and typography.
 
 ---
 
-TABLE / REPORT LIST IMPROVEMENTS
+# TABLE AND REPORT LIST IMPROVEMENTS
 
-Admin and Supervisor report tables should be modernized.
+Improve the report table UI.
 
 Enhancements:
 
 row hover highlight
-rounded table container
-sticky headers
-clean spacing
+rounded container
+clean separators
+thumbnail previews
 
-Include small thumbnails for images.
-
-Add soft divider lines.
+Improve readability by adjusting spacing and typography.
 
 ---
 
-GROUPING SECTIONS
+# GROUPING STRUCTURE
 
-Admin & Student dashboards:
+Admin and Student dashboards:
 
-Group reports by department.
+Group reports by **Department**.
 
 Infrastructure
 Electrical
 Plumbing
 
-Each group should have:
+Each section must be collapsible.
 
-icon
-count badge
-collapsible section
+Display report counts.
 
-Example header:
+Example:
 
 🔧 Infrastructure (12)
 
@@ -190,133 +203,101 @@ Example header:
 
 Supervisor dashboard:
 
-Group reports by workflow status.
+Group reports by **Status**.
 
 Submitted
 In Progress
 Resolved
 
-Each section collapsible.
+Sections must be collapsible.
 
 Submitted and In Progress expanded by default.
 
 ---
 
-DASHBOARD WIDGET POLISH
+# NOTIFICATION PANEL IMPROVEMENT
 
-Enhance statistics cards.
+Improve the notifications dropdown.
 
-Examples:
-
-Total Reports
-Pending
-In Progress
-Critical Issues
-
-Improve with:
-
-gradient icon backgrounds
-larger icons
-better spacing
-subtle hover elevation
-
----
-
-NOTIFICATION PANEL
-
-Improve the notification dropdown.
-
-Add icons for notification types.
+Add icons for notification types:
 
 ℹ info
 ✔ resolved
 🚨 urgent
 
-Add hover highlight for each item.
+Add hover highlight.
 
-Include a "View complaint" action.
-
----
-
-AI ASSESSMENT CARD
-
-Improve the AI assessment display.
-
-Add:
-
-colored badges
-icons
-clean layout
-
-Example:
-
-Category → icon
-Severity → colored badge
-Priority → colored badge
+Add a **View complaint** action link.
 
 ---
 
-HEATMAP PAGE
+# HEATMAP PAGE POLISH
 
-Improve heatmap container styling.
+Improve the heatmap container layout.
 
-Add a header section showing:
+Add proper stat widgets above the map.
 
-Total Issues
-High Priority
-Pending
-Resolved
+Ensure all values display correctly.
 
-Use dashboard widgets above the heatmap.
+Use the same card design system.
 
 ---
 
-LOGIN / REGISTER CONSISTENCY
+# FORM INPUT DESIGN
 
-Keep the login page as the visual reference.
+Standardize form fields across the entire application.
 
-Ensure register page uses identical design language.
+Use:
 
-Match:
+rounded inputs
+consistent padding
+subtle borders
+focus glow
 
-card design
-button style
-form inputs
-spacing
+Match the login page input style.
 
 ---
 
-ANIMATION & MICRO INTERACTIONS
+# BUTTON SYSTEM
 
-Add subtle motion across the UI.
+Create consistent button styles.
 
-Examples:
+Primary buttons:
+
+gradient background
+rounded-lg
+smooth hover animation
+
+Secondary buttons:
+
+outline style
+subtle hover background
+
+---
+
+# MICRO INTERACTIONS
+
+Add subtle animations:
 
 card hover lift
 button hover glow
 dropdown open animation
-chart loading animation
+chart load animation
 
-Avoid heavy animations.
-
-Keep everything smooth and professional.
+Keep animations minimal and smooth.
 
 ---
 
-FINAL GOAL
+# FINAL GOAL
 
-Transform the entire application UI into a **clean, modern SaaS dashboard** using the login page design as the visual inspiration.
+Transform the entire UI into a **modern SaaS-style dashboard** using the login page as the design reference.
 
-The system should feel like a professional product rather than a basic dashboard.
+The application should feel like a **professional production product**, not a basic admin panel.
 
 Again:
 
 NO backend changes
-NO logic modifications
+NO logic changes
 NO API changes
 
-Only visual improvements.
-
-
-IMPORTANT NOTE: 
-MAKE SURE TO COVER EVERY SINGLE PART OF UI AND MAKE IN BETTER 100X 
+Only visual transformation.

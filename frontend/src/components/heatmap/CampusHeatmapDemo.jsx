@@ -3,7 +3,8 @@ import simpleheat from "simpleheat";
 import BLOCK_ANCHORS from "./data/blocks";
 import { adminAPI } from "../../services/api";
 import { Card } from "../ui/Card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Activity, AlertCircle, Clock, CheckCircle } from "lucide-react";
+import { StatsCard } from "../ui/StatsCard";
 import "./styles.css";
 
 const IMAGE_WIDTH = 1000;
@@ -15,21 +16,34 @@ function CampusHeatmapDemo() {
   const [filter, setFilter] = useState('total');
   const [heatmapData, setHeatmapData] = useState([]);
   const [hoveredBlock, setHoveredBlock] = useState(null);
+  const [stats, setStats] = useState({ total: 0, high: 0, pending: 0, resolved: 0 });
 
   useEffect(() => {
-    const fetchHeatmap = async () => {
+    const fetchHeatmapAndStats = async () => {
       setLoading(true);
       try {
-        const response = await adminAPI.getHeatmap(filter);
-        setHeatmapData(response.data);
+        const [heatmapRes, statsRes] = await Promise.all([
+          adminAPI.getHeatmap(filter),
+          adminAPI.getStats()
+        ]);
+        setHeatmapData(heatmapRes.data);
+        if (statsRes.data) {
+          const d = statsRes.data;
+          setStats({
+            total: d.totalComplaints || 0,
+            high: d.highPriority || 0,
+            pending: (d.status?.submitted || 0) + (d.status?.inProgress || 0),
+            resolved: d.status?.resolved || 0,
+          });
+        }
       } catch (err) {
-        console.error("Failed to fetch heatmap data", err);
+        console.error("Failed to fetch data", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHeatmap();
+    fetchHeatmapAndStats();
   }, [filter]);
 
   useEffect(() => {
@@ -86,6 +100,14 @@ function CampusHeatmapDemo() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Contextual Metric Widgets */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatsCard title="Total Issues" value={stats.total} icon={Activity} colorClass="text-blue-600 bg-blue-50" />
+        <StatsCard title="High Priority" value={stats.high} icon={AlertCircle} colorClass="text-red-500 bg-red-50" />
+        <StatsCard title="Pending Resolution" value={stats.pending} icon={Clock} colorClass="text-amber-500 bg-amber-50" />
+        <StatsCard title="Successfully Resolved" value={stats.resolved} icon={CheckCircle} colorClass="text-emerald-500 bg-emerald-50" />
       </div>
 
       {/* Visual Canvas Wrapper */}

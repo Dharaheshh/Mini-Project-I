@@ -3,6 +3,7 @@ import { complaintsAPI, blocksAPI } from '../services/api';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
+import { Select } from './ui/Select';
 import DragDropUpload from './ui/DragDropUpload';
 import { Loader2, CheckCircle2, AlertTriangle, MapPin, FileText, X, Navigation } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -131,10 +132,10 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
         )}
 
         {!predicting && mlPredictions && (
-          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-xl p-5 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl p-5 relative overflow-hidden">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xl">✨</span>
-              <h3 className="font-bold text-indigo-900">AI Assessment</h3>
+              <h3 className="font-bold text-blue-900">AI Assessment</h3>
               <Badge variant="success" className="ml-auto">Active</Badge>
             </div>
 
@@ -169,31 +170,30 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
                 <MapPin size={16} className="mr-1 text-slate-400" />
                 Campus Block
               </label>
-              <select
-                required
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white"
+              <Select
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              >
-                <option value="" disabled>Select a building/block</option>
-                {blocks.map((block) => (
-                  <option key={block.name} value={block.name}>{block.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, location: val })}
+                options={[
+                  ...blocks.map((block) => ({ value: block.name, label: block.name }))
+                ]}
+                placeholder="Select a building/block"
+              />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 flex items-center">
-                <Navigation size={16} className="mr-1 text-slate-400" />
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">
                 Classroom / Specific Area (Optional)
               </label>
-              <input
-                type="text"
-                className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-                placeholder="e.g. Room 304, Near water cooler"
-                value={formData.classroom}
-                onChange={(e) => setFormData({ ...formData, classroom: e.target.value })}
-              />
+              <div className="relative">
+                <Navigation size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-800 placeholder-slate-400 shadow-sm transition-all hover:border-slate-300"
+                  placeholder="e.g. Room 304, Near water cooler"
+                  value={formData.classroom}
+                  onChange={(e) => setFormData({ ...formData, classroom: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 
@@ -212,16 +212,18 @@ const ComplaintForm = ({ onSuccess, onCancel }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 flex items-center">
-            <FileText size={16} className="mr-1 text-slate-400" />
+          <label className="text-sm font-semibold text-slate-700 mb-2 block">
             Description
           </label>
-          <textarea
-            className="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none min-h-[100px]"
-            placeholder="Describe the issue..."
-            value={formData.note}
-            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-          />
+          <div className="relative">
+            <FileText size={18} className="absolute left-3.5 top-4 text-slate-400" />
+            <textarea
+              className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-800 placeholder-slate-400 shadow-sm transition-all hover:border-slate-300 min-h-[120px]"
+              placeholder="Describe the issue..."
+              value={formData.note}
+              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+            />
+          </div>
         </div>
 
         {/* Actions */}

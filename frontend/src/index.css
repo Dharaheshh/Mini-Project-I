@@ -6,7 +6,9 @@
 
 @layer base {
   body {
-    @apply font-sans bg-bg-light text-slate-900 antialiased selection:bg-primary-500/30;
+    @apply font-sans text-slate-900 antialiased selection:bg-cyan-500/30;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f1f5f9 50%, #e0f2fe 100%);
   }
 }
 

@@ -6,12 +6,15 @@ const Card = React.forwardRef(({ className, children, ...props }, ref) => {
         <div
             ref={ref}
             className={cn(
-                'rounded-2xl border border-white/40 bg-white/60 p-6 shadow-xl backdrop-blur-xl transition-all duration-300 hover:shadow-2xl hover:bg-white/80 dark:bg-slate-900/60 dark:border-white/10 dark:hover:bg-slate-800/80',
+                'rounded-xl border border-slate-200 bg-white/90 p-6 shadow-md backdrop-blur-md transition-all duration-300 hover:shadow-lg relative overflow-hidden',
                 className
             )}
             {...props}
         >
-            {children}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+            <div className="relative z-10">
+                {children}
+            </div>
         </div>
     );
 });

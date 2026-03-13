@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { complaintsAPI } from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle, Sparkles, CheckCircle2, Circle } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle, Sparkles, CheckCircle2, Circle, Activity, Flag, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ComplaintDetails = () => {
@@ -166,17 +166,21 @@ const ComplaintDetails = () => {
                         </div>
                     </Card>
 
-                    <Card className="p-6">
-                        <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center">
-                            <Sparkles size={16} className="mr-2 text-primary-600" /> AI Assessment
+                    <Card className="p-6 bg-gradient-to-br from-blue-50/80 to-sky-50/80 border-blue-100/50 shadow-md relative overflow-hidden group">
+                        <h3 className="text-sm font-bold text-blue-900 mb-6 flex items-center gap-2 relative z-10">
+                            <Sparkles size={18} className="text-blue-600 animate-pulse" /> AI Diagnostic Profile
                         </h3>
-                        <div className="space-y-3 text-sm text-slate-600">
-                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                                <span className="text-slate-500">Category</span>
-                                <Badge variant="neutral" className="font-semibold">{complaint.category}</Badge>
+                        <div className="grid grid-cols-1 gap-4 relative z-10">
+                            <div className="flex justify-between items-center p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm transition-transform hover:-translate-y-0.5">
+                                <div className="flex items-center gap-2 text-slate-600 font-medium text-xs uppercase tracking-wider">
+                                    <Tag size={14} className="text-slate-400" /> Category
+                                </div>
+                                <Badge variant="neutral" className="font-bold bg-white text-slate-800">{complaint.category}</Badge>
                             </div>
-                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                                <span className="text-slate-500">Severity</span>
+                            <div className="flex justify-between items-center p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm transition-transform hover:-translate-y-0.5">
+                                <div className="flex items-center gap-2 text-slate-600 font-medium text-xs uppercase tracking-wider">
+                                    <Activity size={14} className="text-slate-400" /> Severity
+                                </div>
                                 <Badge variant={
                                     complaint.severity === 'Hazardous' ? 'danger' :
                                         complaint.severity === 'Severe' ? 'orange' :
@@ -185,12 +189,14 @@ const ComplaintDetails = () => {
                                     {complaint.severity || 'Unknown'}
                                 </Badge>
                             </div>
-                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                                <span className="text-slate-500">Priority</span>
+                            <div className="flex justify-between items-center p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm transition-transform hover:-translate-y-0.5">
+                                <div className="flex items-center gap-2 text-slate-600 font-medium text-xs uppercase tracking-wider">
+                                    <Flag size={14} className="text-slate-400" /> System Priority
+                                </div>
                                 <Badge variant={
                                     complaint.priority === 'High' ? 'danger' :
                                         complaint.priority === 'Medium' ? 'warning' : 'success'
-                                }>
+                                } className="shadow-sm">
                                     {complaint.priority}
                                 </Badge>
                             </div>

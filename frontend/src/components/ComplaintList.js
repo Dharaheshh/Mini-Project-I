@@ -58,33 +58,33 @@ const ComplaintList = ({ complaints }) => {
         const isExpanded = expandedDepts[dept.id];
 
         return (
-          <div key={dept.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div key={dept.id} className="bg-white/70 backdrop-blur-xl rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
             {/* Department Group Header */}
             <div 
-              className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-slate-50/50 border-b border-slate-100' : ''}`}
+              className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/80 transition-colors ${isExpanded ? 'bg-slate-50/60 shadow-inner border-b border-slate-200/50' : ''}`}
               onClick={() => toggleDept(dept.id)}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${dept.bg} ${dept.color}`}>
+                <div className={`p-2 rounded-lg ${dept.bg} ${dept.color} shadow-sm border border-white/50`}>
                   <dept.icon size={20} />
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
                   {dept.label} Issues
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white shadow-sm border border-slate-200 text-slate-700">
                     {deptComplaints.length}
                   </span>
                 </h3>
               </div>
-              <div className="text-slate-400">
-                {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+              <div className="text-slate-400 bg-white/50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
+                {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
               </div>
             </div>
 
             {/* Department Complaints Grid */}
             {isExpanded && (
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-50/30">
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-50/10">
                 {deptComplaints.map((complaint) => (
-                  <Card key={complaint._id} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-slate-200 overflow-hidden p-0 bg-white">
+                  <Card key={complaint._id} className="group hover:shadow-cyan-900/10 hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border-slate-200/50 overflow-hidden p-0 bg-white/80 backdrop-blur-xl">
           <div className="h-48 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
             <img

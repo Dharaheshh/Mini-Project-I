@@ -165,6 +165,7 @@ const SupervisorDashboard = () => {
                             <tr>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Report</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Category</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Severity</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Location</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Priority</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Deadline</th>
@@ -206,6 +207,15 @@ const SupervisorDashboard = () => {
                                                     </Badge>
                                                 )}
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Badge variant={
+                                                complaint.severity === 'Hazardous' ? 'danger' :
+                                                    complaint.severity === 'Severe' ? 'orange' :
+                                                        complaint.severity === 'Moderate' ? 'yellow' : 'success'
+                                            }>
+                                                {complaint.severity || 'Unknown'}
+                                            </Badge>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm text-slate-300 font-medium">{complaint.location}</div>

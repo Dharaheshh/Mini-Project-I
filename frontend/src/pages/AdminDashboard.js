@@ -337,6 +337,7 @@ const AdminDashboard = () => {
               <tr>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Issue</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Severity</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
@@ -346,7 +347,7 @@ const AdminDashboard = () => {
             <tbody className="divide-y divide-slate-100 bg-white">
               {complaints.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
                     No reports found matching your filters.
                   </td>
                 </tr>
@@ -377,6 +378,15 @@ const AdminDashboard = () => {
                           </Badge>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={
+                        complaint.severity === 'Hazardous' ? 'danger' :
+                          complaint.severity === 'Severe' ? 'orange' :
+                            complaint.severity === 'Moderate' ? 'yellow' : 'success'
+                      }>
+                        {complaint.severity || 'Unknown'}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {complaint.location}

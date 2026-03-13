@@ -7,6 +7,8 @@ const variants = {
     warning: 'bg-amber-100 text-amber-700 border-amber-200',
     danger: 'bg-red-100 text-red-700 border-red-200',
     neutral: 'bg-slate-100 text-slate-700 border-slate-200',
+    yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    orange: 'bg-orange-100 text-orange-700 border-orange-200',
 };
 
 const Badge = ({ className, variant = 'default', children, ...props }) => {

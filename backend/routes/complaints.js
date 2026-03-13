@@ -136,8 +136,8 @@ router.post(
       const assignedDepartment = categoryMap[category] || 'infrastructure'; // Default safety fallback
       const note = req.body.note || mlPredictions.description || '';
 
-      // Calculate SLA deadline based on severity
-      const { slaDays, slaDeadline } = calculateSLA(new Date(), severity);
+      // Calculate SLA deadline based on priority
+      const { slaDays, slaDeadline } = calculateSLA(new Date(), priority);
       console.log(`📅 SLA: ${slaDays} day(s) — Deadline: ${slaDeadline.toISOString()}`);
 
       // Create complaint

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { complaintsAPI } from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ComplaintDetails = () => {
@@ -146,6 +146,37 @@ const ComplaintDetails = () => {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </Card>
+
+                    <Card className="p-6">
+                        <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center">
+                            <Sparkles size={16} className="mr-2 text-primary-600" /> AI Assessment
+                        </h3>
+                        <div className="space-y-3 text-sm text-slate-600">
+                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span className="text-slate-500">Category</span>
+                                <Badge variant="neutral" className="font-semibold">{complaint.category}</Badge>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span className="text-slate-500">Severity</span>
+                                <Badge variant={
+                                    complaint.severity === 'Hazardous' ? 'danger' :
+                                        complaint.severity === 'Severe' ? 'orange' :
+                                            complaint.severity === 'Moderate' ? 'yellow' : 'success'
+                                }>
+                                    {complaint.severity || 'Unknown'}
+                                </Badge>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span className="text-slate-500">Priority</span>
+                                <Badge variant={
+                                    complaint.priority === 'High' ? 'danger' :
+                                        complaint.priority === 'Medium' ? 'warning' : 'success'
+                                }>
+                                    {complaint.priority}
+                                </Badge>
+                            </div>
                         </div>
                     </Card>
 

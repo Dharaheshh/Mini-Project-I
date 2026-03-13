@@ -1,155 +1,143 @@
-Refactor the severity detection logic in the ML server to improve the accuracy and realism of severity estimation.
+Implement two UI and SLA improvements in the Smart College Damage Reporting System.
 
-IMPORTANT REQUIREMENT:
-
-Do NOT modify the existing API structure, endpoint names, response schema, or core inference pipeline.
-
-The existing system must continue to function exactly the same from the perspective of the backend and frontend.
-
-Only improve the internal implementation of the severity detection logic.
+IMPORTANT:
+Do not modify or break any existing logic. The system is already working correctly. Only extend the current implementation.
 
 ---
 
-CURRENT PROBLEM
+FEATURE 1 — DISPLAY SEVERITY IN UI
 
-The existing severity detector relies mainly on image brightness, contrast, and color diversity.
+The ML pipeline already produces the following values:
 
-This approach produces unrealistic results because lighting conditions do not reliably indicate infrastructure damage severity.
+category
+severity
+priority
 
----
+Severity must now be clearly visible in the UI for transparency.
 
-NEW APPROACH
+Add severity display in the following places:
 
-Replace the current pixel-statistics method with a hybrid severity detection system that combines:
+1. Admin Dashboard
+   In the complaint table add a column:
 
-1. Category-aware severity rules
-2. Edge detection to estimate structural damage
+Severity
 
-This approach is lightweight, deterministic, and suitable for deployment environments with limited RAM.
+Example row:
 
----
+Complaint | Category | Severity | Priority | Deadline | Status
 
-SEVERITY DETECTION PIPELINE
+2. Supervisor Dashboard
+   Add the same "Severity" column in the complaint list.
 
-The severity detector must now operate as follows:
-
-Step 1:
-Receive the predicted category from the classifier.
-
-Step 2:
-Perform lightweight edge detection on the image using OpenCV.
-
-Example implementation:
-
-* Convert image to grayscale
-* Apply Canny edge detection
-* Calculate edge density
-
-Edge density = number_of_edge_pixels / total_pixels
-
-Step 3:
-Combine category information with edge density to determine severity.
-
----
-
-CATEGORY-AWARE SEVERITY LOGIC
-
-Example logic rules:
-
-Electrical Socket
-→ Default severity = Hazardous
-
-Pipe / Plumbing
-→ Default severity = Severe
-
-Bench / Chair
-→ Default severity = Minor
-
-Projector / Equipment
-→ Default severity = Moderate
-
----
-
-EDGE DENSITY ADJUSTMENT
-
-Edge density indicates visible structural damage.
-
-If edge density is high:
-Increase severity level by one level.
-
-Example mapping:
-
-edge_density > 0.25
-→ damage likely severe
-
-edge_density > 0.15
-→ moderate damage
-
-edge_density < 0.05
-→ minor damage
-
----
-
-SEVERITY OUTPUT FORMAT
-
-The severity detector must still return the same response format used by the current system:
-
-Tuple:
-
-(severity_string, severity_score)
+3. Complaint Detail View
+   Display severity in the AI analysis section.
 
 Example:
 
-("Severe", 0.7)
+## AI Assessment
 
-Valid severity strings must remain:
-
-Minor
-Moderate
-Severe
-Hazardous
+Category: Pipe
+Severity: Severe
+Priority: High
 
 ---
 
-PRIORITY LOGIC
+SEVERITY BADGE DESIGN
 
-Do not change the priority logic implementation.
+Severity should be displayed using color-coded badges.
 
-Priority must continue to be derived from severity.
+Minor → green
+Moderate → yellow
+Severe → orange
+Hazardous → red
 
----
+Example UI:
 
-ADMIN AND SUPERVISOR DASHBOARD
-
-Ensure that priority is clearly visible in both dashboards.
-
-In the complaint list tables add a Priority column:
-
-Complaint | Category | Priority | Status | Deadline
-
-Priority must be color coded:
-
-High → Red
-Medium → Orange
-Low → Green
-
-Priority should also appear in the complaint detail page.
+[Severe]
 
 ---
 
-PERFORMANCE REQUIREMENTS
+FEATURE 2 — PRIORITY BASED DEADLINES
 
-The severity model must remain lightweight and safe for Docker deployment.
+Currently the deadline logic uses a fixed 3-day resolution time.
 
-Constraints:
+Update the SLA logic so deadlines depend on complaint priority.
 
-* Avoid loading large ML models
-* Keep memory usage low
-* Maintain inference speed under 500ms
-* Do not affect the existing category classifier
+Priority → Deadline
+
+High → 1 day
+Medium → 3 days
+Low → 5 days
 
 ---
 
-GOAL
+BACKEND IMPLEMENTATION
 
-Upgrade the severity detection system so it produces more realistic results while keeping the rest of the system stable and fully compatible with the current architecture.
+Create a constant mapping:
+
+backend/constants/slaRules.js
+
+Example:
+
+export const SLA_BY_PRIORITY = {
+High: 1,
+Medium: 3,
+Low: 5
+}
+
+When a complaint is created:
+
+1. Read the complaint priority
+2. Get SLA days from the mapping
+3. Calculate deadline from the complaint creation date
+
+Example logic:
+
+slaDays = SLA_BY_PRIORITY[priority]
+
+deadline = createdAt + slaDays
+
+Store in MongoDB:
+
+slaDays
+slaDeadline
+
+---
+
+UI DEADLINE DISPLAY
+
+Show the deadline in both:
+
+User Dashboard
+Supervisor Dashboard
+
+Example display:
+
+Resolution Deadline: Mar 15
+
+Optionally show remaining time:
+
+Mar 15 (2 days left)
+
+---
+
+OVERDUE INDICATOR
+
+If the complaint is not resolved and current date > slaDeadline:
+
+Show badge:
+
+Overdue
+
+Example:
+
+⚠ Overdue
+
+---
+
+IMPORTANT REQUIREMENTS
+
+Do not change the ML pipeline.
+Do not change complaint submission logic.
+Do not break existing dashboards.
+Only extend the UI and SLA calculation.

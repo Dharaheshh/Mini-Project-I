@@ -61,9 +61,17 @@ const ComplaintList = ({ complaints }) => {
 
             {complaint.slaDeadline && (
               <div className="flex items-center justify-between text-xs border-t border-slate-50 pt-2 pb-1 mb-1">
-                <span className="text-slate-400 flex items-center"><Clock size={12} className="mr-1" /> Deadline:</span>
+                <span className="text-slate-400 flex items-center"><Clock size={12} className="mr-1" /> Resolution Deadline:</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-slate-700">{new Date(complaint.slaDeadline).toLocaleDateString()}</span>
+                  <span className="font-medium text-slate-700">
+                    {new Date(complaint.slaDeadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {(() => {
+                      const diffDays = Math.ceil((new Date(complaint.slaDeadline) - new Date()) / (1000 * 60 * 60 * 24));
+                      const isResolved = complaint.status === 'Resolved';
+                      if (diffDays > 0 && !isResolved) return ` (${diffDays} day${diffDays > 1 ? 's' : ''} left)`;
+                      return '';
+                    })()}
+                  </span>
                   {(() => {
                     const diffDays = Math.ceil((new Date(complaint.slaDeadline) - new Date()) / (1000 * 60 * 60 * 24));
                     const isResolved = complaint.status === 'Resolved';

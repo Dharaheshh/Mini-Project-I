@@ -21,8 +21,8 @@ router.get('/export-report', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=damage-report.pdf');
     res.send(pdfBuffer);
   } catch (error) {
-    console.error('Export report error:', error);
-    res.status(500).json({ message: 'Server error while generating report' });
+    console.error('Export report error:', error.message);
+    res.status(500).json({ message: `Report generation failed: ${error.message}` });
   }
 });
 
@@ -43,8 +43,8 @@ router.post('/export-department-report', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=${department}-report.pdf`);
     res.send(pdfBuffer);
   } catch (error) {
-    console.error('Export department report error:', error);
-    res.status(500).json({ message: 'Server error while mapping departmental PDF' });
+    console.error('Export department report error:', error.message);
+    res.status(500).json({ message: `Department report generation failed: ${error.message}` });
   }
 });
 
@@ -80,8 +80,8 @@ router.post('/send-department-report', async (req, res) => {
 
     res.json({ message: `Report dispatched successfully to ${supervisor.email}` });
   } catch (error) {
-    console.error('Send department report error:', error);
-    res.status(500).json({ message: 'Server error during SMTP email dispatch.' });
+    console.error('Send department report error:', error.message);
+    res.status(500).json({ message: `Email dispatch failed: ${error.message}` });
   }
 });
 

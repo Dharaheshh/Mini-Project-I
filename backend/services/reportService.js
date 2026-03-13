@@ -1,4 +1,5 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 const ejs = require('ejs');
 const path = require('path');
 const Complaint = require('../models/Complaint');
@@ -390,22 +391,39 @@ const generateReport = async (filters) => {
   // Render HTML
   const html = ejs.render(templateHtml, data);
 
-  // Generate PDF
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  const page = await browser.newPage();
+  // Generate PDF — use @sparticuz/chromium (works in both local dev and Render production)
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  } catch (launchErr) {
+    console.error('❌ Chromium launch failed:', launchErr.message);
+    throw new Error(`PDF generation failed: Could not launch browser — ${launchErr.message}`);
+  }
 
-  // Wait until network is fully idle (CDN scripts loaded, charts rendered)
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  try {
+    const page = await browser.newPage();
 
-  const pdfBuffer = await page.pdf({
-    format: 'A4',
-    printBackground: true,
-    margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
-  });
+    // Wait until network is fully idle (CDN scripts loaded, charts rendered)
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
-  await browser.close();
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+    });
 
-  return Buffer.from(pdfBuffer);
+    await browser.close();
+    return Buffer.from(pdfBuffer);
+  } catch (pdfErr) {
+    console.error('❌ PDF rendering failed:', pdfErr.message);
+    await browser.close();
+    throw new Error(`PDF generation failed: ${pdfErr.message}`);
+  }
 };
 
 module.exports = {

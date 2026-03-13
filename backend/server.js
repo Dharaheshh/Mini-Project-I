@@ -6,6 +6,15 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+// ── Environment Validation ──
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  console.warn('⚠️  SMTP credentials (SMTP_USER / SMTP_PASS) are missing — email features will be disabled.');
+}
+if (!process.env.MONGODB_URI) {
+  console.warn('⚠️  MONGODB_URI is not set — database connection will fallback to localhost.');
+}
+console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}${process.env.RENDER ? ' (Render)' : ''}`);
+
 const app = express();
 
 // 1. LOGGING (First)

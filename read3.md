@@ -1,303 +1,57 @@
-Perform a **complete frontend visual transformation** of the Smart College Damage Reporting System.
+Fix backend email dispatch and PDF export errors occurring in the deployed Render environment.
 
-IMPORTANT
+Current symptoms:
+- POST /api/admin/export-report returns 500
+- POST /api/admin/export-department-report returns 500
+- POST /api/admin/send-department-report returns 500
+- Frontend shows "Server error during SMTP email dispatch"
 
-This is a **pure UI/UX redesign task**.
+These operations work locally but fail after deployment.
 
-DO NOT modify:
+Root causes likely include:
+1) Puppeteer failing to launch Chromium on Render
+2) Missing or incorrectly loaded SMTP environment variables
+3) Lack of error logging around PDF generation and email transport
 
-* backend APIs
-* database schema
-* ML logic
-* complaint workflows
-* routing logic
+Required fixes:
 
-The system functionality must remain **100% unchanged**.
+1. Update Puppeteer usage for Render compatibility
+Replace default Puppeteer launch with:
 
-Only redesign the **visual layer**.
+const browser = await puppeteer.launch({
+  args: ['--no-sandbox','--disable-setuid-sandbox'],
+  headless: true
+});
 
----
+Ensure Puppeteer does not depend on a system-installed Chromium.
 
-# DESIGN DIRECTION
+2. Add detailed logging
+Wrap PDF generation and nodemailer calls in try/catch blocks and log errors clearly:
 
-Use the **Login Page design as the visual foundation for the entire application**.
+console.error("PDF generation error:", error);
+console.error("SMTP send error:", error);
 
-The login page already has a modern SaaS aesthetic with:
+3. Verify SMTP configuration
+Ensure nodemailer transporter reads environment variables correctly:
 
-* dark blue gradient
-* soft shadows
-* rounded cards
-* modern typography
-* smooth buttons
+host: process.env.SMTP_HOST
+port: Number(process.env.SMTP_PORT)
+auth: {
+  user: process.env.SMTP_USER,
+  pass: process.env.SMTP_PASS
+}
 
-Apply this **same design language consistently across the entire dashboard**.
+4. Add environment validation on server startup
 
-The goal is to make the whole system feel like **one coherent product**, not separate screens.
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  console.warn("SMTP credentials missing");
+}
 
----
+5. Ensure PDF generation runs before email dispatch and returns file buffer correctly.
 
-# REMOVE PURPLE DESIGN SYSTEM
+6. Ensure API responses return detailed backend errors instead of silent 500 failures.
 
-Currently the UI still uses many **purple theme elements**.
+Goal:
+Make PDF export and email dispatch fully functional in Render production environment without modifying existing business logic or UI.
 
-Remove all purple-based color styling.
-
-Replace it with the **login page blue/teal gradient palette**.
-
-Primary theme colors:
-
-Deep Blue
-Teal
-Slate Gray
-
-Priority colors remain:
-
-High → Red
-Medium → Orange
-Low → Green
-
----
-
-# REMOVE MEANINGLESS ICON BACKGROUND CIRCLES
-
-Some dashboard widgets contain **large faded circular shapes behind icons**.
-
-These circles add no meaning and create visual clutter.
-
-Remove these circular decorations.
-
-Instead use:
-
-clean icon containers
-subtle gradient backgrounds
-small rounded icon boxes
-
-Example improvement:
-
-Instead of:
-
-large faded circle behind icon
-
-Use:
-
-small rounded square icon container.
-
----
-
-# DASHBOARD CARD REDESIGN
-
-Redesign dashboard statistic cards.
-
-Current cards look inconsistent.
-
-New design:
-
-clean rounded cards
-subtle gradient border or icon background
-balanced spacing
-larger number emphasis
-
-Example layout:
-
-Icon
-Title
-Metric value
-Trend indicator
-
-Add subtle hover elevation.
-
----
-
-# ENSURE DASHBOARD WIDGETS SHOW REAL DATA
-
-Some widgets such as the **heatmap statistics cards above the map** appear without values.
-
-Ensure all metric cards correctly display their values using existing frontend state data.
-
-Examples:
-
-Total Issues
-High Priority
-Pending
-Resolved
-
-Do not change backend logic.
-
-Only fix the UI so values appear properly.
-
----
-
-# GLOBAL CARD SYSTEM
-
-Create a unified card style used everywhere:
-
-dashboard cards
-report cards
-heatmap container
-notification panels
-
-Card style:
-
-rounded-xl
-shadow-md
-border-slate-200
-consistent padding
-
-Use subtle hover animation.
-
----
-
-# DROPDOWN REDESIGN
-
-Current dropdowns look like basic browser components.
-
-Replace them with styled dropdowns that match the login page theme.
-
-Requirements:
-
-rounded menus
-soft shadows
-smooth open animation
-hover highlight
-
-Remove default browser appearance.
-
-Ensure consistent padding and typography.
-
----
-
-# TABLE AND REPORT LIST IMPROVEMENTS
-
-Improve the report table UI.
-
-Enhancements:
-
-row hover highlight
-rounded container
-clean separators
-thumbnail previews
-
-Improve readability by adjusting spacing and typography.
-
----
-
-# GROUPING STRUCTURE
-
-Admin and Student dashboards:
-
-Group reports by **Department**.
-
-Infrastructure
-Electrical
-Plumbing
-
-Each section must be collapsible.
-
-Display report counts.
-
-Example:
-
-🔧 Infrastructure (12)
-
----
-
-Supervisor dashboard:
-
-Group reports by **Status**.
-
-Submitted
-In Progress
-Resolved
-
-Sections must be collapsible.
-
-Submitted and In Progress expanded by default.
-
----
-
-# NOTIFICATION PANEL IMPROVEMENT
-
-Improve the notifications dropdown.
-
-Add icons for notification types:
-
-ℹ info
-✔ resolved
-🚨 urgent
-
-Add hover highlight.
-
-Add a **View complaint** action link.
-
----
-
-# HEATMAP PAGE POLISH
-
-Improve the heatmap container layout.
-
-Add proper stat widgets above the map.
-
-Ensure all values display correctly.
-
-Use the same card design system.
-
----
-
-# FORM INPUT DESIGN
-
-Standardize form fields across the entire application.
-
-Use:
-
-rounded inputs
-consistent padding
-subtle borders
-focus glow
-
-Match the login page input style.
-
----
-
-# BUTTON SYSTEM
-
-Create consistent button styles.
-
-Primary buttons:
-
-gradient background
-rounded-lg
-smooth hover animation
-
-Secondary buttons:
-
-outline style
-subtle hover background
-
----
-
-# MICRO INTERACTIONS
-
-Add subtle animations:
-
-card hover lift
-button hover glow
-dropdown open animation
-chart load animation
-
-Keep animations minimal and smooth.
-
----
-
-# FINAL GOAL
-
-Transform the entire UI into a **modern SaaS-style dashboard** using the login page as the design reference.
-
-The application should feel like a **professional production product**, not a basic admin panel.
-
-Again:
-
-NO backend changes
-NO logic changes
-NO API changes
-
-Only visual transformation.
+IMPORTANT: I HOSTED BACKEND AND ML SERVER IN RENDER AND FRONTEND IN VERCEL AND FACING THE ABOVE PROBLEMS SO FIX ACCORDINGLY DONT CHANGE CORE LOGIC OF PROJECT

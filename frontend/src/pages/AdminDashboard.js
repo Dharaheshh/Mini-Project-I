@@ -23,7 +23,8 @@ import {
   CheckCircle,
   Clock,
   FileText,
-  Mail
+  Mail,
+  Activity
 } from 'lucide-react';
 
 import { Card } from '../components/ui/Card';
@@ -167,6 +168,28 @@ const AdminDashboard = () => {
     { name: 'Low', value: complaints.filter(c => c.priority === 'Low').length, color: '#10b981' },
   ].filter(d => d.value > 0);
 
+  // Smart Issue Radar & Urgent Issues Aggregation
+  const unresolvedComplaints = complaints.filter(c => c.status !== 'Resolved');
+  const urgentIssuesCount = unresolvedComplaints.filter(c => c.priority === 'High').length;
+
+  const radarMap = {};
+  unresolvedComplaints.forEach(c => {
+    const loc = c.location || 'Unknown Area';
+    if (!radarMap[loc]) {
+      radarMap[loc] = { block: loc, high: 0, medium: 0, low: 0, hasOverdue: false };
+    }
+    if (c.priority === 'High') radarMap[loc].high++;
+    if (c.priority === 'Medium') radarMap[loc].medium++;
+    if (c.priority === 'Low') radarMap[loc].low++;
+    
+    if (c.slaDeadline) {
+      if (new Date() > new Date(c.slaDeadline)) {
+        radarMap[loc].hasOverdue = true;
+      }
+    }
+  });
+  const radarData = Object.values(radarMap).sort((a, b) => b.high - a.high || b.medium - a.medium);
+
   return (
     <div className="space-y-8 animate-slide-up">
       {/* Header */}
@@ -218,6 +241,74 @@ const AdminDashboard = () => {
           />
         </div>
       )}
+
+      {/* Smart Radar & Urgent Issues Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Urgent Issues Widget */}
+        <Card className="lg:col-span-1 bg-gradient-to-br from-red-50 to-white flex md:flex-row lg:flex-col justify-center items-center p-8 text-center relative overflow-hidden ring-1 ring-red-100/50 shadow-sm hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+          <AlertTriangle size={48} className="text-red-500 mb-4 animate-[bounce_2s_infinite]" />
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 mb-1">🚨 Urgent Issues</h3>
+            <p className="text-slate-600 flex flex-col items-center">
+              <strong className="text-4xl font-extrabold text-red-600 my-2">{urgentIssuesCount}</strong>
+              <span className="text-sm font-medium">High Priority Complaints<br/>need attention</span>
+            </p>
+          </div>
+        </Card>
+
+        {/* Smart Issue Radar Widget */}
+        <Card className="lg:col-span-2 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center mb-6 pb-4 border-b border-slate-100">
+            <div className="bg-primary-100 p-2 rounded-lg mr-3">
+              <Activity size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Smart Issue Radar</h3>
+              <p className="text-xs text-slate-500">Real-time localized priority mapping</p>
+            </div>
+          </div>
+          <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+            {radarData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+                <CheckCircle size={32} className="mb-2 text-slate-300" />
+                <p>No active issues on campus.</p>
+              </div>
+            ) : (
+              radarData.map((data, idx) => (
+                <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all hover:scale-[1.01] ${data.hasOverdue ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-100 hover:border-slate-200 hover:bg-white'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">
+                      {data.hasOverdue ? '🚨' : data.high > 0 ? '🔴' : data.medium > 0 ? '🟠' : '🟢'}
+                    </div>
+                    <div>
+                      <h4 className={`font-bold ${data.hasOverdue ? 'text-red-900' : 'text-slate-800'}`}>
+                        {data.block}
+                      </h4>
+                      <div className="text-xs mt-1">
+                        {data.hasOverdue ? (
+                          <span className="text-red-600 font-semibold flex items-center gap-1">
+                            <Clock size={10} /> {data.high + data.medium + data.low} Overdue Issues
+                          </span>
+                        ) : (
+                          <div className="flex gap-2 text-slate-500 font-medium">
+                            {data.high > 0 && <span className="text-red-600">{data.high} High</span>}
+                            {data.medium > 0 && <span className="text-orange-500">{data.medium} Medium</span>}
+                            {data.low > 0 && <span className="text-green-600">{data.low} Low</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant={data.hasOverdue ? 'danger' : 'neutral'} className="shadow-sm">
+                    {data.high + data.medium + data.low} Total
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* Supervisor Reports (Department Scopes) */}
       <Card className="p-6">

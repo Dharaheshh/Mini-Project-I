@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { complaintsAPI } from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowLeft, Image as ImageIcon, AlertCircle, Sparkles, CheckCircle2, Circle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ComplaintDetails = () => {
@@ -125,23 +125,40 @@ const ComplaintDetails = () => {
                             <Clock size={20} className="mr-2 text-primary-600" /> Progress Timeline
                         </h3>
 
-                        <div className="relative border-l-2 border-slate-100 ml-3 space-y-8">
-                            {(complaint.statusHistory && complaint.statusHistory.length > 0 ? complaint.statusHistory : [{ status: 'Submitted', date: complaint.createdAt }]).map((history, idx, arr) => {
-                                const isLast = idx === arr.length - 1;
+                        <div className="flex items-center justify-between mt-8 mb-4 relative">
+                            {/* Background Line */}
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 rounded-full z-0"></div>
+
+                            {/* Progress Line */}
+                            <div
+                                className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary-500 rounded-full z-0 transition-all duration-500"
+                                style={{ width: complaint.status === 'Resolved' ? '100%' : complaint.status === 'In-Progress' ? '50%' : '0%' }}
+                            ></div>
+
+                            {/* Steps */}
+                            {['Submitted', 'In-Progress', 'Resolved'].map((step, idx) => {
+                                // Find if this step is reached
+                                const historyStep = complaint.statusHistory?.find(h => h.status === step);
+                                // Default Submitted to createdAt if missing in history
+                                const date = step === 'Submitted' && !historyStep ? complaint.createdAt : historyStep?.date;
+
+                                const statusOrder = { 'Submitted': 0, 'In-Progress': 1, 'Resolved': 2 };
+                                const currentOrder = statusOrder[complaint.status] || 0;
+                                const isCompleted = idx <= currentOrder;
+                                const isCurrent = idx === currentOrder;
+
                                 return (
-                                    <div key={idx} className="relative pl-6">
-                                        <span
-                                            className={`absolute -left-2.5 top-1 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-white
-                        ${isLast ? 'bg-primary-500' : 'bg-slate-300'}
-                      `}
-                                        />
-                                        <div className="flex flex-col">
-                                            <span className={`text-sm font-bold ${isLast ? 'text-slate-900' : 'text-slate-500'}`}>
-                                                {history.status}
-                                            </span>
-                                            <span className="text-xs text-slate-400 mt-1">
-                                                {new Date(history.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                                            </span>
+                                    <div key={idx} className="relative z-10 flex flex-col items-center group">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm transition-colors duration-300 ${isCompleted ? 'bg-primary-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                            {isCompleted && !isCurrent ? <CheckCircle2 size={18} /> : isCurrent ? <Clock size={18} className="animate-pulse" /> : <Circle size={18} />}
+                                        </div>
+                                        <div className="mt-3 text-center">
+                                            <p className={`text-sm font-bold ${isCompleted ? 'text-slate-800' : 'text-slate-400'}`}>{step}</p>
+                                            {date && (
+                                                <p className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">
+                                                    {new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 );

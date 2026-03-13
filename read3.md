@@ -1,231 +1,322 @@
-Implement an automated Email Alert System in the Smart College Damage Reporting System.
+Perform a **complete frontend UI/UX overhaul** of the Smart College Damage Reporting System.
 
-IMPORTANT REQUIREMENT
+IMPORTANT RULES
 
-The system is already stable and fully functional. Do NOT modify or break any existing backend logic, ML pipelines, complaint creation routes, database schemas, or UI components.
+This task is **STRICTLY UI / UX only**.
 
-All alert functionality must be implemented as a **separate modular email service** that runs alongside the current system.
+DO NOT modify:
 
----
+* backend APIs
+* business logic
+* routing
+* database schema
+* ML integrations
+* complaint workflows
 
-PLATFORM
+All functionality must remain identical.
 
-Use the existing Nodemailer + Gmail SMTP setup already configured in the project.
-
-Environment variables already available:
-
-EMAIL_USER
-EMAIL_PASS
-FRONTEND_URL
-
----
-
-CREATE EMAIL SERVICE
-
-Create a new service:
-
-backend/services/emailNotifier.js
-
-Responsibilities:
-
-• Initialize Nodemailer transporter
-• Format email messages
-• Send alerts to supervisors
-• Attach complaint images
-• Include dashboard link
+The goal is to **transform the UI into a modern SaaS-level dashboard using the existing Login Page design language as the visual reference.**
 
 ---
 
-SUPERVISOR EMAIL CONFIG
+GLOBAL DESIGN SYSTEM
 
-Create a configuration file:
+Use the **Login Page theme as the primary design language** across the entire application.
 
-backend/config/supervisorEmails.js
+The login page already uses a modern gradient SaaS design.
+
+Replicate that aesthetic everywhere.
+
+Key style elements:
+
+• soft gradient backgrounds
+• glassmorphism style cards
+• modern shadows
+• rounded corners
+• smooth hover animations
+• consistent icon usage
+• better spacing and typography
+
+Create a **consistent design system** for:
+
+Cards
+Buttons
+Dropdowns
+Tables
+Badges
+Forms
+Filters
+Navigation
+
+---
+
+COLOR SYSTEM
+
+Follow the login page palette.
+
+Primary gradient:
+
+Deep blue → teal gradient
 
 Example:
 
-const SUPERVISOR_EMAILS = {
-electrical: "[electrical_supervisor@email.com](mailto:electrical_supervisor@email.com)",
-plumbing: "[plumbing_supervisor@email.com](mailto:plumbing_supervisor@email.com)",
-infrastructure: "[infrastructure_supervisor@email.com](mailto:infrastructure_supervisor@email.com)"
-};
+linear-gradient(135deg, #0f172a, #1e3a8a, #0891b2)
 
-module.exports = SUPERVISOR_EMAILS;
+Use this gradient for:
 
-This allows easy updates without modifying logic.
+buttons
+primary highlights
+header accents
 
----
+Status colors:
 
-ALERT TRIGGERS
+High Priority → Red
+Medium Priority → Orange
+Low Priority → Green
 
-The system must send email alerts for three situations.
+SLA status colors:
 
----
-
-1. HIGH PRIORITY COMPLAINT CREATED
-
-When a complaint is created and priority === "High":
-
-Immediately send an email to the appropriate supervisor.
-
-Subject:
-
-🚨 High Priority Infrastructure Issue
-
-Email Body Example:
-
-High Priority Complaint Reported
-
-Category: Electrical
-Severity: Hazardous
-Location: CSE-A / F001
-
-Complaint ID: #143
-
-Immediate attention required.
-
-View complaint:
-${FRONTEND_URL}/complaints/{complaintId}
-
-Attach the complaint image if available.
+Safe → Green
+Due Soon → Amber
+Overdue → Red
 
 ---
 
-2. DEADLINE APPROACHING (DUE SOON)
+GLOBAL CARD STYLE
 
-If the complaint deadline is approaching.
+All dashboard elements should use a unified card design.
 
-Condition:
+Card styling:
 
-deadline - current time < 12 hours
+rounded-xl
+shadow-lg
+backdrop blur (glass effect)
+soft border
 
-Send reminder email.
+Example visual feel:
 
-Subject:
+modern SaaS dashboard like:
 
-⚠ SLA Deadline Approaching
-
-Email Body Example:
-
-Reminder: Complaint nearing SLA deadline
-
-Complaint: #143
-Category: Pipe Leak
-Location: CSE-A
-
-Deadline: Today
-
-Please resolve before the deadline.
-
-Dashboard link:
-${FRONTEND_URL}/complaints/{complaintId}
+Stripe
+Linear
+Vercel
+Supabase
 
 ---
 
-3. OVERDUE COMPLAINT
+DROPDOWN COMPONENT REDESIGN
 
-If:
+Current dropdowns look like basic browser elements.
 
-current time > slaDeadline
-AND complaint status != "Resolved"
+Replace them with modern styled dropdown components.
 
-Send urgent alert email.
+Improvements required:
 
-Subject:
+rounded menus
+hover highlights
+smooth open animation
+soft shadows
+consistent padding
 
-🚨 Complaint Overdue
+Example options:
 
-Email Body Example:
+🏫 A Block
+🏫 B Block
+📚 Library
+🏠 Boys Hostel
 
-Urgent: Complaint has exceeded SLA deadline
-
-Complaint: #143
-Category: Electrical
-Location: CSE-A
-
-Deadline exceeded.
-
-Immediate action required.
-
-Dashboard link:
-${FRONTEND_URL}/complaints/{complaintId}
+Dropdown should match the login page visual style.
 
 ---
 
-IMAGE ATTACHMENT
+BUTTON SYSTEM
 
-If a complaint image exists:
+Create a consistent button style across the application.
 
-Attach the image in the email or include it as a preview link.
+Primary buttons:
 
----
+gradient background
+rounded-lg
+hover glow
+smooth animation
 
-CRON JOB FOR MONITORING
+Example hover:
 
-Create:
+scale slightly
+shadow increases
 
-backend/cron/emailCron.js
-
-Use node-cron.
-
-Run every 30 minutes to check unresolved complaints.
-
-Steps:
-
-1. Query complaints where status !== "Resolved"
-2. Check if deadline approaching (<12 hours)
-3. Check if overdue
-4. Send appropriate email alert
+Use consistent button sizes.
 
 ---
 
-HIGH PRIORITY TRIGGER
+TABLE / REPORT LIST IMPROVEMENTS
 
-Modify the complaint creation controller.
+Admin and Supervisor report tables should be modernized.
 
-After complaint.save() and after sending the API response:
+Enhancements:
 
-Add a fire-and-forget email alert.
+row hover highlight
+rounded table container
+sticky headers
+clean spacing
+
+Include small thumbnails for images.
+
+Add soft divider lines.
+
+---
+
+GROUPING SECTIONS
+
+Admin & Student dashboards:
+
+Group reports by department.
+
+Infrastructure
+Electrical
+Plumbing
+
+Each group should have:
+
+icon
+count badge
+collapsible section
+
+Example header:
+
+🔧 Infrastructure (12)
+
+---
+
+Supervisor dashboard:
+
+Group reports by workflow status.
+
+Submitted
+In Progress
+Resolved
+
+Each section collapsible.
+
+Submitted and In Progress expanded by default.
+
+---
+
+DASHBOARD WIDGET POLISH
+
+Enhance statistics cards.
+
+Examples:
+
+Total Reports
+Pending
+In Progress
+Critical Issues
+
+Improve with:
+
+gradient icon backgrounds
+larger icons
+better spacing
+subtle hover elevation
+
+---
+
+NOTIFICATION PANEL
+
+Improve the notification dropdown.
+
+Add icons for notification types.
+
+ℹ info
+✔ resolved
+🚨 urgent
+
+Add hover highlight for each item.
+
+Include a "View complaint" action.
+
+---
+
+AI ASSESSMENT CARD
+
+Improve the AI assessment display.
+
+Add:
+
+colored badges
+icons
+clean layout
 
 Example:
 
-if (complaint.priority === "High") {
-const { sendHighPriorityEmail } = require("../services/emailNotifier");
-sendHighPriorityEmail(complaint).catch(err => console.error("Email alert error:", err.message));
-}
-
-This must NOT block the complaint creation response.
+Category → icon
+Severity → colored badge
+Priority → colored badge
 
 ---
 
-ERROR HANDLING
+HEATMAP PAGE
 
-If email sending fails:
+Improve heatmap container styling.
 
-• Log the error
-• Do NOT interrupt the complaint creation process
-• The system must continue operating normally
+Add a header section showing:
+
+Total Issues
+High Priority
+Pending
+Resolved
+
+Use dashboard widgets above the heatmap.
 
 ---
 
-TESTING
+LOGIN / REGISTER CONSISTENCY
 
-Test with the three supervisor email addresses already configured.
+Keep the login page as the visual reference.
 
-Verify that:
+Ensure register page uses identical design language.
 
-• High priority complaints trigger email alerts
-• Due soon reminders send correctly
-• Overdue complaints trigger urgent alerts
+Match:
+
+card design
+button style
+form inputs
+spacing
+
+---
+
+ANIMATION & MICRO INTERACTIONS
+
+Add subtle motion across the UI.
+
+Examples:
+
+card hover lift
+button hover glow
+dropdown open animation
+chart loading animation
+
+Avoid heavy animations.
+
+Keep everything smooth and professional.
 
 ---
 
 FINAL GOAL
 
-Create an automated alert system where supervisors receive email notifications when:
+Transform the entire application UI into a **clean, modern SaaS dashboard** using the login page design as the visual inspiration.
 
-• High priority complaints are created
-• SLA deadlines are approaching
-• Complaints become overdue
+The system should feel like a professional product rather than a basic dashboard.
 
-Emails must include complaint details, image preview, and a direct dashboard link.
+Again:
+
+NO backend changes
+NO logic modifications
+NO API changes
+
+Only visual improvements.
+
+
+IMPORTANT NOTE: 
+MAKE SURE TO COVER EVERY SINGLE PART OF UI AND MAKE IN BETTER 100X 

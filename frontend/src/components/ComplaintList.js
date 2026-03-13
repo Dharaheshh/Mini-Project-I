@@ -1,10 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
-import { MapPin, Calendar, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
+import { MapPin, Calendar, Clock, ChevronRight, AlertTriangle, ChevronDown, Wrench, Zap, Droplets } from 'lucide-react';
 
 const ComplaintList = ({ complaints }) => {
+  const [expandedDepts, setExpandedDepts] = useState({
+    infrastructure: true,
+    electrical: false,
+    plumbing: false,
+  });
+
+  const toggleDept = (dept) => {
+    setExpandedDepts(prev => ({ ...prev, [dept]: !prev[dept] }));
+  };
+
+  const getDepartmentForCategory = (category) => {
+    const electricalOpts = ['Projector', 'Socket', 'Fan', 'Light'];
+    const plumbingOpts = ['Pipe', 'Washbasin', 'Toilets'];
+    if (electricalOpts.includes(category)) return 'electrical';
+    if (plumbingOpts.includes(category)) return 'plumbing';
+    return 'infrastructure';
+  };
+
+  const groupedComplaints = {
+    infrastructure: [],
+    electrical: [],
+    plumbing: []
+  };
+
+  (complaints || []).forEach(c => {
+    const dept = getDepartmentForCategory(c.category);
+    groupedComplaints[dept].push(c);
+  });
   if (!complaints || complaints.length === 0) {
     return (
       <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200">
@@ -18,9 +46,45 @@ const ComplaintList = ({ complaints }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
-      {complaints.map((complaint) => (
-        <Card key={complaint._id} className="group hover:shadow-lg transition-all duration-300 border-slate-100 overflow-hidden p-0">
+    <div className="space-y-8 animate-slide-up">
+      {[
+        { id: 'infrastructure', label: 'Infrastructure', icon: Wrench, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { id: 'electrical', label: 'Electrical', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+        { id: 'plumbing', label: 'Plumbing', icon: Droplets, color: 'text-cyan-600', bg: 'bg-cyan-50' }
+      ].map(dept => {
+        const deptComplaints = groupedComplaints[dept.id];
+        if (deptComplaints.length === 0) return null;
+
+        const isExpanded = expandedDepts[dept.id];
+
+        return (
+          <div key={dept.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* Department Group Header */}
+            <div 
+              className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-slate-50/50 border-b border-slate-100' : ''}`}
+              onClick={() => toggleDept(dept.id)}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${dept.bg} ${dept.color}`}>
+                  <dept.icon size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                  {dept.label} Issues
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700">
+                    {deptComplaints.length}
+                  </span>
+                </h3>
+              </div>
+              <div className="text-slate-400">
+                {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+              </div>
+            </div>
+
+            {/* Department Complaints Grid */}
+            {isExpanded && (
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-50/30">
+                {deptComplaints.map((complaint) => (
+                  <Card key={complaint._id} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-slate-200 overflow-hidden p-0 bg-white">
           <div className="h-48 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
             <img
@@ -97,8 +161,13 @@ const ComplaintList = ({ complaints }) => {
               </Link>
             </div>
           </div>
-        </Card>
-      ))}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

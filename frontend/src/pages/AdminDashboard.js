@@ -24,7 +24,12 @@ import {
   Clock,
   FileText,
   Mail,
-  Activity
+  Activity,
+  ChevronDown,
+  ChevronRight,
+  Wrench,
+  Zap,
+  Droplets
 } from 'lucide-react';
 
 import { Card } from '../components/ui/Card';
@@ -48,6 +53,35 @@ const AdminDashboard = () => {
   const [exporting, setExporting] = useState(false);
   const [exportingDept, setExportingDept] = useState(null);
   const [sendingEmail, setSendingEmail] = useState(null);
+  const [expandedDepts, setExpandedDepts] = useState({
+    infrastructure: true,
+    electrical: false,
+    plumbing: false,
+  });
+
+  const toggleDept = (dept) => {
+    setExpandedDepts(prev => ({ ...prev, [dept]: !prev[dept] }));
+  };
+
+  // Grouping mapping logic
+  const getDepartmentForCategory = (category) => {
+    const electricalOpts = ['Projector', 'Socket', 'Fan', 'Light'];
+    const plumbingOpts = ['Pipe', 'Washbasin', 'Toilets'];
+    if (electricalOpts.includes(category)) return 'electrical';
+    if (plumbingOpts.includes(category)) return 'plumbing';
+    return 'infrastructure'; // Bench, Chair, Other, etc.
+  };
+
+  const groupedComplaints = {
+    infrastructure: [],
+    electrical: [],
+    plumbing: []
+  };
+
+  complaints.forEach(c => {
+    const dept = getDepartmentForCategory(c.category);
+    groupedComplaints[dept].push(c);
+  });
 
   useEffect(() => {
     fetchData();
@@ -431,6 +465,7 @@ const AdminDashboard = () => {
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Severity</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Deadline</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
@@ -438,16 +473,52 @@ const AdminDashboard = () => {
             <tbody className="divide-y divide-slate-100 bg-white">
               {complaints.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan="8" className="px-6 py-12 text-center text-slate-400">
                     No reports found matching your filters.
                   </td>
                 </tr>
               ) : (
-                complaints.map((complaint) => (
-                  <tr key={complaint._id} className={`hover:bg-slate-50/80 transition-colors group ${complaint.duplicate ? 'bg-orange-50/60' : ''}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 shadow-sm relative group-hover:scale-105 transition-transform">
+                [
+                  { id: 'infrastructure', label: 'Infrastructure', icon: Wrench, color: 'text-blue-600', bg: 'bg-blue-50' },
+                  { id: 'electrical', label: 'Electrical', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+                  { id: 'plumbing', label: 'Plumbing', icon: Droplets, color: 'text-cyan-600', bg: 'bg-cyan-50' }
+                ].map(dept => {
+                  const deptComplaints = groupedComplaints[dept.id];
+                  if (deptComplaints.length === 0) return null;
+
+                  const isExpanded = expandedDepts[dept.id];
+
+                  return (
+                    <React.Fragment key={dept.id}>
+                      {/* Department Group Header */}
+                      <tr 
+                        className={`cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-slate-50/50' : ''}`}
+                        onClick={() => toggleDept(dept.id)}
+                      >
+                        <td colSpan="8" className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-1.5 rounded-md ${dept.bg} ${dept.color}`}>
+                              <dept.icon size={18} />
+                            </div>
+                            <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                              {dept.label} Reports
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                                {deptComplaints.length}
+                              </span>
+                            </h4>
+                            <div className="ml-auto text-slate-400">
+                              {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Department Complaints (Collapsible) */}
+                      {isExpanded && deptComplaints.map((complaint) => (
+                        <tr key={complaint._id} className={`hover:bg-slate-50/80 transition-all duration-300 group ${complaint.duplicate ? 'bg-orange-50/60' : ''}`}>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 shadow-sm relative group-hover:scale-105 transition-transform duration-300">
                           <img src={complaint.image.url} alt="Damage" className="h-full w-full object-cover" />
                         </div>
                         <div>
@@ -479,16 +550,42 @@ const AdminDashboard = () => {
                         {complaint.severity || 'Unknown'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td className="px-6 py-4 text-sm text-slate-600 font-medium">
                       {complaint.location}
+                      {complaint.classroom && <div className="text-xs text-slate-500 mt-0.5">Room: {complaint.classroom}</div>}
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={
                         complaint.priority === 'High' ? 'danger' :
                           complaint.priority === 'Medium' ? 'warning' : 'success'
-                      }>
+                      } className="shadow-sm">
                         {complaint.priority}
                       </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                        {complaint.slaDeadline ? (() => {
+                            const now = new Date();
+                            const deadline = new Date(complaint.slaDeadline);
+                            const diffMs = deadline - now;
+                            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                            const isResolved = complaint.status === 'Resolved';
+                            const isOverdue = diffDays < 0 && !isResolved;
+                            const isDueSoon = diffDays >= 0 && diffDays <= 1 && !isResolved;
+                            return (
+                                <div className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide uppercase">
+                                    <span className="text-slate-500 font-medium tracking-normal mb-0.5">{deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    {isResolved ? (
+                                        <span className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 w-max">On Time</span>
+                                    ) : isOverdue ? (
+                                        <span className="text-red-700 bg-red-50 px-1 py-0.5 rounded border border-red-200 flex items-center gap-1 w-max"><AlertTriangle size={10} /> Overdue by {Math.abs(diffDays)}d</span>
+                                    ) : isDueSoon ? (
+                                        <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 w-max">Due Soon ({diffDays}d)</span>
+                                    ) : (
+                                        <span className="text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 w-max">{diffDays} days left</span>
+                                    )}
+                                </div>
+                            );
+                        })() : <span className="text-xs text-slate-500">—</span>}
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={
@@ -498,24 +595,27 @@ const AdminDashboard = () => {
                         {complaint.status}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-right flex justify-end gap-3 items-center mt-3 border-none">
+                    <td className="px-6 py-4 text-right flex justify-end gap-3 items-center mt-3 border-none opacity-80 group-hover:opacity-100 transition-opacity">
                       <select
                         value={complaint.status}
                         onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
-                        className="text-xs border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 py-1.5 px-2 bg-white shadow-sm cursor-pointer"
+                        className="text-xs border-slate-200 text-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 py-1.5 px-2 bg-white shadow-sm cursor-pointer hover:border-primary-300 transition-colors"
                       >
                         <option value="Submitted">Pending</option>
                         <option value="In-Progress">In Progress</option>
                         <option value="Resolved">Resolved</option>
                       </select>
-                      <Link to={`/complaints/${complaint._id}`} className="text-slate-400 hover:text-primary-600 p-1">
+                      <Link to={`/complaints/${complaint._id}`} className="text-slate-400 hover:text-primary-600 p-1 hover:bg-primary-50 rounded-full transition-colors">
                         <MoreVertical size={16} />
                       </Link>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
+                ))}
+            </React.Fragment>
+          );
+        })
+      )}
+    </tbody>
           </table>
         </div>
       </Card>

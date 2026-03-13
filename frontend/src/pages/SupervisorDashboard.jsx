@@ -8,7 +8,11 @@ import {
     Clock,
     ClipboardList,
     AlertCircle,
-    AlertTriangle
+    AlertTriangle,
+    ChevronDown,
+    ChevronRight,
+    Play,
+    CheckCircle2
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
@@ -39,6 +43,29 @@ const SupervisorDashboard = () => {
         status: '',
         priority: '',
         search: '',
+    });
+    const [expandedStatus, setExpandedStatus] = useState({
+        Submitted: true,
+        'In-Progress': true,
+        Resolved: false,
+    });
+
+    const toggleStatus = (status) => {
+        setExpandedStatus(prev => ({ ...prev, [status]: !prev[status] }));
+    };
+
+    const groupedComplaints = {
+        Submitted: [],
+        'In-Progress': [],
+        Resolved: []
+    };
+
+    complaints.forEach(c => {
+        if (groupedComplaints[c.status]) {
+            groupedComplaints[c.status].push(c);
+        } else {
+            groupedComplaints.Submitted.push(c); // fallback
+        }
     });
 
     useEffect(() => {
@@ -146,16 +173,6 @@ const SupervisorDashboard = () => {
                                 className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-white placeholder-slate-500"
                             />
                         </div>
-                        <select
-                            value={filters.status}
-                            onChange={(e) => handleFilterChange('status', e.target.value)}
-                            className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-white"
-                        >
-                            <option value="">All Statuses</option>
-                            <option value="Submitted">Pending</option>
-                            <option value="In-Progress">In Progress</option>
-                            <option value="Resolved">Resolved</option>
-                        </select>
                     </div>
                 </div>
 
@@ -181,100 +198,144 @@ const SupervisorDashboard = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                complaints.map((complaint) => (
-                                    <tr key={complaint._id} className={`hover:bg-slate-700/30 transition-colors ${complaint.duplicate ? 'bg-orange-900/20 border-l-2 border-l-orange-500' : ''}`}>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-700 shadow-md">
-                                                    <img src={complaint.image.url} alt="Damage" className="h-full w-full object-cover" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-white line-clamp-1 w-48">{complaint.note || 'No description provided'}</p>
-                                                    <p className="text-xs text-slate-400 flex items-center mt-1">
-                                                        <Clock size={12} className="mr-1 opacity-70" />
-                                                        {new Date(complaint.createdAt).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col gap-1 items-start">
-                                                <Badge variant="neutral" className="bg-slate-700 text-slate-200 border-0">{complaint.category}</Badge>
-                                                {complaint.duplicate && (
-                                                    <Badge variant="danger" className="bg-orange-900/30 text-orange-400 text-[10px] px-1.5 py-0.5 border-orange-700/50 shadow-sm flex items-center gap-1">
-                                                        <AlertTriangle size={10} />
-                                                        Duplicate Report
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <Badge variant={
-                                                complaint.severity === 'Hazardous' ? 'danger' :
-                                                    complaint.severity === 'Severe' ? 'orange' :
-                                                        complaint.severity === 'Moderate' ? 'yellow' : 'success'
-                                            }>
-                                                {complaint.severity || 'Unknown'}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-slate-300 font-medium">{complaint.location}</div>
-                                            {complaint.classroom && <div className="text-xs text-slate-500 mt-0.5">Room: {complaint.classroom}</div>}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <Badge variant={
-                                                complaint.priority === 'High' ? 'danger' :
-                                                    complaint.priority === 'Medium' ? 'warning' : 'success'
-                                            }>
-                                                {complaint.priority}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {complaint.slaDeadline ? (() => {
-                                                const now = new Date();
-                                                const deadline = new Date(complaint.slaDeadline);
-                                                const diffMs = deadline - now;
-                                                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                                                const isResolved = complaint.status === 'Resolved';
-                                                const isOverdue = diffDays < 0 && !isResolved;
-                                                const isDueSoon = diffDays >= 0 && diffDays <= 1 && !isResolved;
-                                                return (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-xs text-slate-300">{deadline.toLocaleDateString()}</span>
-                                                        {isOverdue && <Badge variant="danger" className="bg-red-900/40 text-red-400 border-red-800/50 text-[10px] px-1.5 py-0">Overdue</Badge>}
-                                                        {isDueSoon && <Badge variant="warning" className="bg-yellow-900/30 text-yellow-400 border-yellow-700/50 text-[10px] px-1.5 py-0">Due Soon</Badge>}
-                                                    </div>
-                                                );
-                                            })() : <span className="text-xs text-slate-500">—</span>}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <Badge variant={
-                                                complaint.status === 'Resolved' ? 'success' :
-                                                    complaint.status === 'In-Progress' ? 'default' : 'warning'
-                                            } className="capitalize font-bold h-6 shadow-sm">
-                                                {complaint.status}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-5 text-right flex justify-end gap-3 items-center mt-2 border-none">
-                                            <select
-                                                value={complaint.status}
-                                                onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
-                                                className={`text-xs font-bold rounded-lg focus:ring-2 focus:ring-blue-500 py-2 px-3 shadow-inner cursor-pointer transition-colors border-0
-                          ${complaint.status === 'Resolved' ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' :
-                                                        complaint.status === 'In-Progress' ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' :
-                                                            'bg-slate-700 text-white hover:bg-slate-600'
-                                                    }`}
+                                [
+                                    { id: 'Submitted', label: 'Submitted / Pending Action', icon: AlertCircle, color: 'text-red-400', bg: 'bg-red-500/20' },
+                                    { id: 'In-Progress', label: 'Active Jobs', icon: Play, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+                                    { id: 'Resolved', label: 'Successfully Completed', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/20' }
+                                ].map(statusGroup => {
+                                    const statusComplaints = groupedComplaints[statusGroup.id];
+                                    if (statusComplaints.length === 0) return null;
+
+                                    const isExpanded = expandedStatus[statusGroup.id];
+
+                                    return (
+                                        <React.Fragment key={statusGroup.id}>
+                                            <tr 
+                                                className={`cursor-pointer hover:bg-slate-700/50 transition-colors ${isExpanded ? 'bg-slate-700/30' : ''}`}
+                                                onClick={() => toggleStatus(statusGroup.id)}
                                             >
-                                                <option value="Submitted">Mark Pending</option>
-                                                <option value="In-Progress">Start Job</option>
-                                                <option value="Resolved">Complete Issue</option>
-                                            </select>
-                                            <Link to={`/complaints/${complaint._id}`} className="text-slate-500 hover:text-white p-2 rounded max-w-max hover:bg-slate-700 transition">
-                                                <MoreVertical size={18} />
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))
+                                                <td colSpan="8" className="px-6 py-3 border-y border-slate-700">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-1.5 rounded-md ${statusGroup.bg} ${statusGroup.color}`}>
+                                                            <statusGroup.icon size={18} />
+                                                        </div>
+                                                        <h4 className="font-bold text-white flex items-center gap-2">
+                                                            {statusGroup.label}
+                                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">
+                                                                {statusComplaints.length}
+                                                            </span>
+                                                        </h4>
+                                                        <div className="ml-auto text-slate-500">
+                                                            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            {isExpanded && statusComplaints.map((complaint) => (
+                                                <tr key={complaint._id} className={`hover:bg-slate-700/40 transition-colors group ${complaint.duplicate ? 'bg-orange-900/20 border-l-2 border-l-orange-500' : ''}`}>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-600 shadow-md relative group-hover:scale-105 transition-transform duration-300">
+                                                                <img src={complaint.image.url} alt="Damage" className="h-full w-full object-cover" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium text-white line-clamp-1 w-48">{complaint.note || 'No description provided'}</p>
+                                                                <p className="text-xs text-slate-400 flex items-center mt-1">
+                                                                    <Clock size={12} className="mr-1 opacity-70" />
+                                                                    {new Date(complaint.createdAt).toLocaleDateString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col gap-1 items-start">
+                                                            <Badge variant="neutral" className="bg-slate-700 text-slate-200 border-0">{complaint.category}</Badge>
+                                                            {complaint.duplicate && (
+                                                                <Badge variant="danger" className="bg-orange-900/30 text-orange-400 text-[10px] px-1.5 py-0.5 border-orange-700/50 shadow-sm flex items-center gap-1">
+                                                                    <AlertTriangle size={10} />
+                                                                    Duplicate
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge variant={
+                                                            complaint.severity === 'Hazardous' ? 'danger' :
+                                                                complaint.severity === 'Severe' ? 'orange' :
+                                                                    complaint.severity === 'Moderate' ? 'yellow' : 'success'
+                                                        }>
+                                                            {complaint.severity || 'Unknown'}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-sm text-slate-300 font-medium">{complaint.location}</div>
+                                                        {complaint.classroom && <div className="text-xs text-slate-500 mt-0.5">Room: {complaint.classroom}</div>}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge variant={
+                                                            complaint.priority === 'High' ? 'danger' :
+                                                                complaint.priority === 'Medium' ? 'warning' : 'success'
+                                                        }>
+                                                            {complaint.priority}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {complaint.slaDeadline ? (() => {
+                                                            const now = new Date();
+                                                            const deadline = new Date(complaint.slaDeadline);
+                                                            const diffMs = deadline - now;
+                                                            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                                            const isResolved = complaint.status === 'Resolved';
+                                                            const isOverdue = diffDays < 0 && !isResolved;
+                                                            const isDueSoon = diffDays >= 0 && diffDays <= 1 && !isResolved;
+                                                            return (
+                                                                <div className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide uppercase">
+                                                                    <span className="text-slate-400 font-medium tracking-normal mb-0.5">{deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    {isResolved ? (
+                                                                        <span className="text-green-500 bg-green-500/10 px-1 py-0.5 rounded w-max">On Time</span>
+                                                                    ) : isOverdue ? (
+                                                                        <span className="text-red-500 bg-red-500/10 px-1 py-0.5 rounded flex items-center gap-1 w-max"><AlertTriangle size={10} /> Overdue by {Math.abs(diffDays)}d</span>
+                                                                    ) : isDueSoon ? (
+                                                                        <span className="text-amber-500 bg-amber-500/10 px-1 py-0.5 rounded w-max">Due Soon ({diffDays}d)</span>
+                                                                    ) : (
+                                                                        <span className="text-emerald-500 bg-emerald-500/10 px-1 py-0.5 rounded w-max">{diffDays} days left</span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })() : <span className="text-xs text-slate-500">—</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge variant={
+                                                            complaint.status === 'Resolved' ? 'success' :
+                                                                complaint.status === 'In-Progress' ? 'default' : 'warning'
+                                                        } className="capitalize font-bold h-6 shadow-sm">
+                                                            {complaint.status}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-right flex justify-end gap-3 items-center mt-2 border-none">
+                                                        <select
+                                                            value={complaint.status}
+                                                            onChange={(e) => handleStatusChange(complaint._id, e.target.value)}
+                                                            className={`text-xs font-bold rounded-lg focus:ring-2 focus:ring-blue-500 py-2 px-3 shadow-inner cursor-pointer transition-colors border-0
+                                                                ${complaint.status === 'Resolved' ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' :
+                                                                    complaint.status === 'In-Progress' ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' :
+                                                                        'bg-slate-700 text-white hover:bg-slate-600'
+                                                                }`}
+                                                        >
+                                                            <option value="Submitted">Mark Pending</option>
+                                                            <option value="In-Progress">Start Job</option>
+                                                            <option value="Resolved">Complete Issue</option>
+                                                        </select>
+                                                        <Link to={`/complaints/${complaint._id}`} className="text-slate-500 hover:text-white p-2 rounded max-w-max hover:bg-slate-700 transition">
+                                                            <MoreVertical size={18} />
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

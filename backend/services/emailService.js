@@ -1,16 +1,16 @@
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
-    // If SMTP is not explicitly configured, fallback to Ethereal or standard mock logging
-    console.log(`✉️ Email Transporter initialized`);
+    console.log(`✉️ Email Transporter initialized (service: gmail)`);
     return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: process.env.SMTP_PORT || 587,
-        secure: process.env.SMTP_PORT == 465,
+        service: 'gmail',
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
     });
 };
 

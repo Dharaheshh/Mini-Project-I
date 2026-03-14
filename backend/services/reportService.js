@@ -1,5 +1,4 @@
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer');
 const ejs = require('ejs');
 const path = require('path');
 const Complaint = require('../models/Complaint');
@@ -391,15 +390,15 @@ const generateReport = async (filters) => {
   // Render HTML
   const html = ejs.render(templateHtml, data);
 
-  // Generate PDF — use @sparticuz/chromium (works in both local dev and Render production)
+  // Generate PDF — env-aware Chromium launch
+  const isProduction = process.env.NODE_ENV === 'production';
   let browser;
   try {
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
+    browser = await puppeteer.launch(
+      isProduction
+        ? { args: ['--no-sandbox', '--disable-setuid-sandbox'], headless: true }
+        : { headless: true }
+    );
   } catch (launchErr) {
     console.error('❌ Chromium launch failed:', launchErr.message);
     throw new Error(`PDF generation failed: Could not launch browser — ${launchErr.message}`);

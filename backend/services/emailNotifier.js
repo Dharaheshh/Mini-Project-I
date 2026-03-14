@@ -19,15 +19,16 @@ let transporter = null;
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: process.env.SMTP_PORT || 587,
-      secure: (process.env.SMTP_PORT || 587) == 465,
+      service: 'gmail',
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     });
-    console.log('📧 Email Notifier transporter initialized');
+    console.log('📧 Email Notifier transporter initialized (service: gmail)');
   }
   return transporter;
 }

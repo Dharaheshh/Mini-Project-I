@@ -1,57 +1,133 @@
-Fix backend email dispatch and PDF export errors occurring in the deployed Render environment.
+Fix cross-environment compatibility issues affecting:
 
-Current symptoms:
-- POST /api/admin/export-report returns 500
-- POST /api/admin/export-department-report returns 500
-- POST /api/admin/send-department-report returns 500
-- Frontend shows "Server error during SMTP email dispatch"
+1. Puppeteer PDF generation
+2. Nodemailer SMTP email dispatch
 
-These operations work locally but fail after deployment.
+The application works locally but fails in the Render production environment due to:
 
-Root causes likely include:
-1) Puppeteer failing to launch Chromium on Render
-2) Missing or incorrectly loaded SMTP environment variables
-3) Lack of error logging around PDF generation and email transport
+• Puppeteer sandbox restrictions on Render
+• Gmail SMTP connection timeouts caused by IPv6 routing issues
 
-Required fixes:
+The goal is to make both PDF generation and email dispatch work reliably in **both local development and production** without changing any existing application logic.
 
-1. Update Puppeteer usage for Render compatibility
-Replace default Puppeteer launch with:
+---
 
-const browser = await puppeteer.launch({
-  args: ['--no-sandbox','--disable-setuid-sandbox'],
-  headless: true
+### 1️⃣ Fix Puppeteer Cross-Environment Launch
+
+Update the Puppeteer launch configuration to detect production environment and apply sandbox flags only when running on Render.
+
+Implement:
+
+```
+const isProduction = process.env.NODE_ENV === "production";
+
+const browser = await puppeteer.launch(
+  isProduction
+    ? {
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        headless: true
+      }
+    : {
+        headless: true
+      }
+);
+```
+
+This ensures:
+
+Local → default Chromium launch
+Render → sandbox disabled for container security restrictions.
+
+---
+
+### 2️⃣ Replace Manual SMTP Config With Gmail Service Transport
+
+Remove manual SMTP configuration using:
+
+```
+host: smtp.gmail.com
+port: 587
+```
+
+Instead use Nodemailer’s Gmail service transport to avoid IPv6 connection timeouts.
+
+Implement:
+
+```
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
 });
+```
 
-Ensure Puppeteer does not depend on a system-installed Chromium.
+This ensures stable connections from Render infrastructure.
 
-2. Add detailed logging
-Wrap PDF generation and nodemailer calls in try/catch blocks and log errors clearly:
+---
 
-console.error("PDF generation error:", error);
+### 3️⃣ Add SMTP Timeouts & Logging
+
+Improve reliability and debugging:
+
+```
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  },
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000
+});
+```
+
+Add logging before sending emails:
+
+```
+console.log("📧 Sending email to:", recipientEmail);
+```
+
+Catch and log errors clearly:
+
+```
 console.error("SMTP send error:", error);
+```
 
-3. Verify SMTP configuration
-Ensure nodemailer transporter reads environment variables correctly:
+---
 
-host: process.env.SMTP_HOST
-port: Number(process.env.SMTP_PORT)
-auth: {
-  user: process.env.SMTP_USER,
-  pass: process.env.SMTP_PASS
-}
+### 4️⃣ Ensure Environment Variables Load Correctly
 
-4. Add environment validation on server startup
+Confirm the following variables are used consistently:
 
-if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.warn("SMTP credentials missing");
-}
+```
+SMTP_USER
+SMTP_PASS
+SMTP_FROM
+```
 
-5. Ensure PDF generation runs before email dispatch and returns file buffer correctly.
+Convert port values using:
 
-6. Ensure API responses return detailed backend errors instead of silent 500 failures.
+```
+Number(process.env.SMTP_PORT)
+```
 
-Goal:
-Make PDF export and email dispatch fully functional in Render production environment without modifying existing business logic or UI.
+if still referenced anywhere.
 
-IMPORTANT: I HOSTED BACKEND AND ML SERVER IN RENDER AND FRONTEND IN VERCEL AND FACING THE ABOVE PROBLEMS SO FIX ACCORDINGLY DONT CHANGE CORE LOGIC OF PROJECT
+---
+
+### 5️⃣ Maintain Existing Business Logic
+
+Do NOT modify:
+
+• cron SLA logic
+• report generation logic
+• complaint workflow
+• notification logic
+• API routes
+
+Only improve environment compatibility for Puppeteer and SMTP.
+
+Goal: PDF export and email dispatch must work both locally and in the Render deployment environment.

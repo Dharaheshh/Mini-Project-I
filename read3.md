@@ -1,133 +1,101 @@
-Fix cross-environment compatibility issues affecting:
+Fix cross-platform Puppeteer PDF generation so it works both locally and on Render.
 
-1. Puppeteer PDF generation
-2. Nodemailer SMTP email dispatch
+Current error on Render:
 
-The application works locally but fails in the Render production environment due to:
+```
+Could not find Chrome (ver. 146.0.7680.76)
+cache path: /opt/render/.cache/puppeteer
+```
 
-• Puppeteer sandbox restrictions on Render
-• Gmail SMTP connection timeouts caused by IPv6 routing issues
+This occurs because Render does not automatically install Chromium for Puppeteer.
 
-The goal is to make both PDF generation and email dispatch work reliably in **both local development and production** without changing any existing application logic.
+The solution is to use a cross-platform Chromium package.
 
 ---
 
-### 1️⃣ Fix Puppeteer Cross-Environment Launch
+### 1️⃣ Install required packages
 
-Update the Puppeteer launch configuration to detect production environment and apply sandbox flags only when running on Render.
-
-Implement:
+Add the following dependencies:
 
 ```
+npm install puppeteer-core @sparticuz/chromium
+```
+
+Remove the direct dependency on `puppeteer` if present.
+
+---
+
+### 2️⃣ Update PDF generation code
+
+Modify the Puppeteer launch configuration to support both environments.
+
+Example implementation:
+
+```javascript
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
+
 const isProduction = process.env.NODE_ENV === "production";
 
-const browser = await puppeteer.launch(
-  isProduction
-    ? {
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        headless: true
-      }
-    : {
-        headless: true
-      }
-);
-```
-
-This ensures:
-
-Local → default Chromium launch
-Render → sandbox disabled for container security restrictions.
-
----
-
-### 2️⃣ Replace Manual SMTP Config With Gmail Service Transport
-
-Remove manual SMTP configuration using:
-
-```
-host: smtp.gmail.com
-port: 587
-```
-
-Instead use Nodemailer’s Gmail service transport to avoid IPv6 connection timeouts.
-
-Implement:
-
-```
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+async function launchBrowser() {
+  if (isProduction) {
+    return await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless
+    });
+  } else {
+    const puppeteerLocal = require("puppeteer");
+    return await puppeteerLocal.launch({
+      headless: true
+    });
   }
-});
+}
 ```
 
-This ensures stable connections from Render infrastructure.
+Use `launchBrowser()` everywhere PDF generation requires Puppeteer.
 
 ---
 
-### 3️⃣ Add SMTP Timeouts & Logging
+### 3️⃣ Update Render build command
 
-Improve reliability and debugging:
+Ensure Render installs Chromium dependencies during build.
 
-```
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 20000
-});
-```
-
-Add logging before sending emails:
+Add to Render build command if necessary:
 
 ```
-console.log("📧 Sending email to:", recipientEmail);
+npm install
 ```
 
-Catch and log errors clearly:
+No manual Chrome installation should be required after switching to `@sparticuz/chromium`.
 
-```
-console.error("SMTP send error:", error);
+---
+
+### 4️⃣ Add error logging
+
+Wrap Puppeteer launch with clear logging:
+
+```javascript
+try {
+  const browser = await launchBrowser();
+} catch (error) {
+  console.error("❌ Chromium launch failed:", error);
+  throw new Error("PDF generation failed: Could not launch browser");
+}
 ```
 
 ---
 
-### 4️⃣ Ensure Environment Variables Load Correctly
-
-Confirm the following variables are used consistently:
-
-```
-SMTP_USER
-SMTP_PASS
-SMTP_FROM
-```
-
-Convert port values using:
-
-```
-Number(process.env.SMTP_PORT)
-```
-
-if still referenced anywhere.
-
----
-
-### 5️⃣ Maintain Existing Business Logic
+### 5️⃣ Maintain existing logic
 
 Do NOT modify:
 
-• cron SLA logic
 • report generation logic
-• complaint workflow
-• notification logic
+• email logic
+• cron SLA logic
 • API routes
+• frontend behavior
 
-Only improve environment compatibility for Puppeteer and SMTP.
+Only improve the Puppeteer launch mechanism.
 
-Goal: PDF export and email dispatch must work both locally and in the Render deployment environment.
+Goal: PDF generation must work reliably on both **local development environments and Render deployment**.

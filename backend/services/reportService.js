@@ -1,7 +1,23 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 const ejs = require('ejs');
 const path = require('path');
 const Complaint = require('../models/Complaint');
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+async function launchBrowser() {
+  if (isProduction) {
+    return await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  } else {
+    const puppeteerLocal = require('puppeteer');
+    return await puppeteerLocal.launch({ headless: true });
+  }
+}
 
 const generateReport = async (filters) => {
   const { startDate, endDate, type, department } = filters;
@@ -390,15 +406,10 @@ const generateReport = async (filters) => {
   // Render HTML
   const html = ejs.render(templateHtml, data);
 
-  // Generate PDF — env-aware Chromium launch
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Generate PDF — cross-platform Chromium launch
   let browser;
   try {
-    browser = await puppeteer.launch(
-      isProduction
-        ? { args: ['--no-sandbox', '--disable-setuid-sandbox'], headless: true }
-        : { headless: true }
-    );
+    browser = await launchBrowser();
   } catch (launchErr) {
     console.error('❌ Chromium launch failed:', launchErr.message);
     throw new Error(`PDF generation failed: Could not launch browser — ${launchErr.message}`);

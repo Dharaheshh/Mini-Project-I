@@ -73,6 +73,21 @@ mongoose
     // Start the email alert cron job
     const { startEmailCron } = require('./cron/emailCron');
     startEmailCron();
+
+    // PART 4: Verify SMTP transporter on startup
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const nodemailer = require('nodemailer');
+      const smtpVerifier = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        family: 4,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      smtpVerifier.verify()
+        .then(() => console.log('✉️ SMTP transporter ready'))
+        .catch(err => console.error('❌ SMTP verification failed:', err.message));
+    }
   })
   .catch((err) => {
     console.error('❌ MongoDB Error:', err.message);

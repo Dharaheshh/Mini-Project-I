@@ -11,6 +11,20 @@ const cron = require('node-cron');
 const Complaint = require('../models/Complaint');
 const { sendDueSoonEmail, sendOverdueEmail } = require('../services/emailNotifier');
 
+// PART 5: In-memory retry protection — skip re-sending for 10 minutes after a failure
+const failedEmailCooldown = new Map();
+const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+
+function isOnCooldown(complaintId) {
+  const lastFail = failedEmailCooldown.get(complaintId);
+  if (!lastFail) return false;
+  if (Date.now() - lastFail > COOLDOWN_MS) {
+    failedEmailCooldown.delete(complaintId);
+    return false;
+  }
+  return true;
+}
+
 function startEmailCron() {
   // Run every 30 minutes
   cron.schedule('*/1 * * * *', async () => {
@@ -27,22 +41,36 @@ function startEmailCron() {
 
       let dueSoonCount = 0;
       let overdueCount = 0;
+      let skippedCount = 0;
 
       for (const complaint of unresolvedComplaints) {
+        const cid = complaint._id.toString();
+
+        // Skip if this complaint email recently failed
+        if (isOnCooldown(cid)) {
+          skippedCount++;
+          continue;
+        }
+
         const deadline = new Date(complaint.slaDeadline);
 
-        if (deadline < now) {
-          // OVERDUE
-          await sendOverdueEmail(complaint);
-          overdueCount++;
-        } else if (deadline <= twelveHoursLater) {
-          // DUE SOON (within 12 hours)
-          await sendDueSoonEmail(complaint);
-          dueSoonCount++;
+        try {
+          if (deadline < now) {
+            // OVERDUE
+            await sendOverdueEmail(complaint);
+            overdueCount++;
+          } else if (deadline <= twelveHoursLater) {
+            // DUE SOON (within 12 hours)
+            await sendDueSoonEmail(complaint);
+            dueSoonCount++;
+          }
+        } catch (emailErr) {
+          console.error(`❌ [Email Cron] Email failed for complaint #${cid.slice(-6)}: ${emailErr.message}`);
+          failedEmailCooldown.set(cid, Date.now());
         }
       }
 
-      console.log(`⏰ [Email Cron] Done. Overdue: ${overdueCount}, Due Soon: ${dueSoonCount}`);
+      console.log(`⏰ [Email Cron] Done. Overdue: ${overdueCount}, Due Soon: ${dueSoonCount}${skippedCount ? `, Skipped (cooldown): ${skippedCount}` : ''}`);
     } catch (err) {
       console.error(`❌ [Email Cron] Error: ${err.message}`);
     }

@@ -85,6 +85,73 @@ router.post('/send-department-report', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/system-check
+// @desc    Diagnostic endpoint — tests Chromium, PDF, SMTP, email
+// @access  Private/Admin
+router.get('/system-check', async (req, res) => {
+  const results = { chromium: 'fail', pdf: 'fail', smtp: 'fail', email: 'skipped' };
+
+  // 1. Test Chromium launch
+  let browser;
+  try {
+    const puppeteer = require('puppeteer');
+    const isProduction = process.env.NODE_ENV === 'production';
+    browser = await puppeteer.launch({
+      args: isProduction ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
+      headless: true,
+    });
+    results.chromium = 'ok';
+  } catch (err) {
+    results.chromium = `fail: ${err.message}`;
+  }
+
+  // 2. Test PDF generation
+  if (browser) {
+    try {
+      const page = await browser.newPage();
+      await page.setContent('<h1>System Check</h1>');
+      await page.pdf({ format: 'A4' });
+      results.pdf = 'ok';
+    } catch (err) {
+      results.pdf = `fail: ${err.message}`;
+    } finally {
+      await browser.close();
+    }
+  }
+
+  // 3. Test SMTP verification
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com', port: 465, secure: true, family: 4,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await transporter.verify();
+      results.smtp = 'ok';
+
+      // 4. Test email send
+      try {
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: process.env.SMTP_USER,
+          subject: '🔧 System Check — Test Email',
+          text: 'This is an automated system check email. If you received this, SMTP is working correctly.',
+        });
+        results.email = 'ok';
+      } catch (sendErr) {
+        results.email = `fail: ${sendErr.message}`;
+      }
+    } catch (err) {
+      results.smtp = `fail: ${err.message}`;
+    }
+  } else {
+    results.smtp = 'skipped: SMTP credentials not configured';
+  }
+
+  res.json(results);
+});
+
 // @route   GET /api/admin/complaints
 // @desc    Get all complaints with filters
 // @access  Private/Admin

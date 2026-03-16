@@ -393,13 +393,19 @@ const generateReport = async (filters) => {
   // Generate PDF — env-aware Chromium launch
   const isProduction = process.env.NODE_ENV === 'production';
   let browser;
+
+  console.time('⏱ PDF generation');
+  const pdfStartTime = Date.now();
+
   try {
-    browser = await puppeteer.launch(
-      isProduction
-        ? { args: ['--no-sandbox', '--disable-setuid-sandbox'], headless: true }
-        : { headless: true }
-    );
+    browser = await puppeteer.launch({
+      args: isProduction
+        ? ['--no-sandbox', '--disable-setuid-sandbox']
+        : [],
+      headless: true
+    });
   } catch (launchErr) {
+    console.timeEnd('⏱ PDF generation');
     console.error('❌ Chromium launch failed:', launchErr.message);
     throw new Error(`PDF generation failed: Could not launch browser — ${launchErr.message}`);
   }
@@ -417,8 +423,16 @@ const generateReport = async (filters) => {
     });
 
     await browser.close();
+    console.timeEnd('⏱ PDF generation');
+
+    const elapsed = Date.now() - pdfStartTime;
+    if (elapsed > 5000) {
+      console.warn(`⚠️ PDF generation took ${elapsed}ms (exceeds 5s threshold)`);
+    }
+
     return Buffer.from(pdfBuffer);
   } catch (pdfErr) {
+    console.timeEnd('⏱ PDF generation');
     console.error('❌ PDF rendering failed:', pdfErr.message);
     await browser.close();
     throw new Error(`PDF generation failed: ${pdfErr.message}`);

@@ -398,12 +398,15 @@ const generateReport = async (filters) => {
   const pdfStartTime = Date.now();
 
   try {
-    browser = await puppeteer.launch({
-      args: isProduction
-        ? ['--no-sandbox', '--disable-setuid-sandbox']
-        : [],
+    const launchOptions = {
       headless: true
-    });
+    };
+
+    if (isProduction) {
+      launchOptions.args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
+    }
+
+    browser = await puppeteer.launch(launchOptions);
   } catch (launchErr) {
     console.timeEnd('⏱ PDF generation');
     console.error('❌ Chromium launch failed:', launchErr.message);

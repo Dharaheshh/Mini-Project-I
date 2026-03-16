@@ -3,6 +3,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const dns = require('dns');
+
+// Force IPv4 DNS resolution for Render (fixes SMTP ENETUNREACH IPv6 timeouts in Node 17+)
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 

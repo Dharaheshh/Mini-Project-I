@@ -1,7 +1,12 @@
+/**
+ * emailService.js
+ * Sends supervisor PDF report emails via Nodemailer + Gmail SMTP.
+ *
+ * Uses explicit IPv4 (family: 4) to avoid Render ENETUNREACH IPv6 errors.
+ */
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
-    console.log(`✉️ Email Transporter initialized (smtp.gmail.com:465, IPv4)`);
     return nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
@@ -20,11 +25,13 @@ const createTransporter = () => {
 const sendSupervisorReport = async (supervisor, department, stats, pdfBuffer) => {
     try {
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            console.warn('⚠️ SMTP Credentials missing in environment configuration. Email dispatch aborted safely.');
+            console.warn('⚠️ SMTP credentials missing — email dispatch skipped.');
             return false;
         }
 
         const transporter = createTransporter();
+
+        console.log(`📧 Sending supervisor report to: ${supervisor.email}`);
 
         const mailOptions = {
             from: process.env.SMTP_FROM || '"Admin Portal" <admin@college.edu>',
@@ -62,14 +69,12 @@ const sendSupervisorReport = async (supervisor, department, stats, pdfBuffer) =>
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log(`✉️ Mail sent dynamically to ${supervisor.email}: ${info.messageId}`);
+        console.log(`✉️ Supervisor report sent to ${supervisor.email}: ${info.messageId}`);
         return true;
     } catch (error) {
-        console.error('Failed to send Supervisor email:', error);
-        throw new Error('Email Dispatch Failed');
+        console.error('❌ SMTP send error:', error.message);
+        throw new Error(`Email dispatch failed: ${error.message}`);
     }
 };
 
-module.exports = {
-    sendSupervisorReport
-};
+module.exports = { sendSupervisorReport };

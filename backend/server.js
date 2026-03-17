@@ -5,14 +5,14 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const dns = require('dns');
 
-// Force IPv4 DNS resolution for Render (fixes SMTP ENETUNREACH IPv6 timeouts in Node 17+)
+// Force IPv4 DNS resolution globally (fixes Gmail SMTP ENETUNREACH on Render)
 dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
 // ── Environment Validation ──
 if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.warn('⚠️  SMTP credentials (SMTP_USER / SMTP_PASS) are missing — email features will be disabled.');
+  console.warn('⚠️  SMTP credentials missing — email features will be disabled.');
 }
 if (!process.env.MONGODB_URI) {
   console.warn('⚠️  MONGODB_URI is not set — database connection will fallback to localhost.');
@@ -21,29 +21,26 @@ console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}${process
 
 const app = express();
 
-// 1. LOGGING (First)
+// 1. LOGGING
 app.use((req, res, next) => {
   console.log(`👉 [${req.method}] ${req.url} - Origin: ${req.headers.origin}`);
   next();
 });
 
-// 2. DEBUG ROUTES (IMMEDIATELY AFTER LOGGING - NO MIDDLEWARE)
-// This proves if the server is even capable of responding.
+// 2. DEBUG ROUTES
 app.get('/api/test-debug', (req, res) => {
-  console.log('✅ /api/test-debug hit! sending response...');
-  res.header("Access-Control-Allow-Origin", "*"); // Manual header for this route only
-  res.json({ status: 'alive', message: 'If you see this, the server is working.' });
+  console.log('✅ /api/test-debug hit!');
+  res.header("Access-Control-Allow-Origin", "*");
+  res.json({ status: 'alive', message: 'Server is working.' });
 });
 
 app.get('/', (req, res) => {
   res.send('API Root is reachable.');
 });
 
-// 3. CORS (Standard)
+// 3. CORS
 app.use(cors());
-
 app.options('*', cors());
-
 
 // 4. BODY PARSERS
 app.use(express.json());
@@ -56,8 +53,8 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/user', require('./routes/user'));
-app.use('/api/blocks', require('./routes/blocks')); // Standardized blocks
-app.use('/api/supervisor', require('./routes/supervisor')); // Dept Supervisor routes
+app.use('/api/blocks', require('./routes/blocks'));
+app.use('/api/supervisor', require('./routes/supervisor'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -78,18 +75,15 @@ mongoose
     const { startEmailCron } = require('./cron/emailCron');
     startEmailCron();
 
-    // PART 4: Verify SMTP transporter on startup
+    // Verify SMTP on startup
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       const nodemailer = require('nodemailer');
-      const smtpVerifier = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        family: 4,
+      const verifier = nodemailer.createTransport({
+        host: 'smtp.gmail.com', port: 465, secure: true, family: 4,
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       });
-      smtpVerifier.verify()
-        .then(() => console.log('✉️ SMTP transporter ready'))
+      verifier.verify()
+        .then(() => console.log('✉️  SMTP transporter ready'))
         .catch(err => console.error('❌ SMTP verification failed:', err.message));
     }
   })
@@ -97,7 +91,7 @@ mongoose
     console.error('❌ MongoDB Error:', err.message);
   });
 
-const PORT = process.env.PORT; // Rely exclusively on process.env.PORT
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

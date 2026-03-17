@@ -86,40 +86,21 @@ router.post('/send-department-report', async (req, res) => {
 });
 
 // @route   GET /api/admin/system-check
-// @desc    Diagnostic endpoint — tests Chromium, PDF, SMTP, email
+// @desc    Diagnostic endpoint — tests PDF generation and SMTP email
 // @access  Private/Admin
 router.get('/system-check', async (req, res) => {
-  const results = { chromium: 'fail', pdf: 'fail', smtp: 'fail', email: 'skipped' };
+  const results = { pdf: 'fail', smtp: 'fail' };
 
-  // 1. Test Chromium launch
-  let browser;
+  // 1. Test PDF generation via pdfService
   try {
-    const puppeteer = require('puppeteer');
-    const isProduction = process.env.NODE_ENV === 'production';
-    browser = await puppeteer.launch({
-      args: isProduction ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
-      headless: true,
-    });
-    results.chromium = 'ok';
+    const { generatePDF } = require('../services/pdfService');
+    const testPdf = await generatePDF('<h1 style="font-family:sans-serif;">System Check ✅</h1>');
+    results.pdf = testPdf && testPdf.length > 0 ? 'ok' : 'fail: empty buffer';
   } catch (err) {
-    results.chromium = `fail: ${err.message}`;
+    results.pdf = `fail: ${err.message}`;
   }
 
-  // 2. Test PDF generation
-  if (browser) {
-    try {
-      const page = await browser.newPage();
-      await page.setContent('<h1>System Check</h1>');
-      await page.pdf({ format: 'A4' });
-      results.pdf = 'ok';
-    } catch (err) {
-      results.pdf = `fail: ${err.message}`;
-    } finally {
-      await browser.close();
-    }
-  }
-
-  // 3. Test SMTP verification
+  // 2. Test SMTP transporter
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     try {
       const nodemailer = require('nodemailer');
@@ -129,19 +110,6 @@ router.get('/system-check', async (req, res) => {
       });
       await transporter.verify();
       results.smtp = 'ok';
-
-      // 4. Test email send
-      try {
-        await transporter.sendMail({
-          from: process.env.SMTP_FROM || process.env.SMTP_USER,
-          to: process.env.SMTP_USER,
-          subject: '🔧 System Check — Test Email',
-          text: 'This is an automated system check email. If you received this, SMTP is working correctly.',
-        });
-        results.email = 'ok';
-      } catch (sendErr) {
-        results.email = `fail: ${sendErr.message}`;
-      }
     } catch (err) {
       results.smtp = `fail: ${err.message}`;
     }

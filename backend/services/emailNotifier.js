@@ -1,12 +1,13 @@
 /**
- * Email Notifier Service
- * Sends automated email alerts to supervisors for:
+ * emailNotifier.js
+ * Sends automated email alerts to supervisors via Nodemailer + Gmail SMTP.
+ *
+ * Alert types:
  *  - High priority complaints (immediate)
  *  - Approaching SLA deadlines (due soon)
  *  - Overdue complaints
  *
- * Uses the existing Nodemailer + Gmail SMTP config.
- * Errors are logged but NEVER block the complaint workflow.
+ * Uses IPv4 enforced Gmail SMTP. Errors are logged but NEVER block workflows.
  */
 const nodemailer = require('nodemailer');
 const User = require('../models/User');

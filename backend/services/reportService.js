@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const { generatePDF } = require('./pdfService');
 const ejs = require('ejs');
 const path = require('path');
 const Complaint = require('../models/Complaint');
@@ -390,56 +390,8 @@ const generateReport = async (filters) => {
   // Render HTML
   const html = ejs.render(templateHtml, data);
 
-  // Generate PDF — env-aware Chromium launch
-  const isProduction = process.env.NODE_ENV === 'production';
-  let browser;
-
-  console.time('⏱ PDF generation');
-  const pdfStartTime = Date.now();
-
-  try {
-    const launchOptions = {
-      headless: true
-    };
-
-    if (isProduction) {
-      launchOptions.args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
-    }
-
-    browser = await puppeteer.launch(launchOptions);
-  } catch (launchErr) {
-    console.timeEnd('⏱ PDF generation');
-    console.error('❌ Chromium launch failed:', launchErr.message);
-    throw new Error(`PDF generation failed: Could not launch browser — ${launchErr.message}`);
-  }
-
-  try {
-    const page = await browser.newPage();
-
-    // Wait until network is fully idle (CDN scripts loaded, charts rendered)
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
-    });
-
-    await browser.close();
-    console.timeEnd('⏱ PDF generation');
-
-    const elapsed = Date.now() - pdfStartTime;
-    if (elapsed > 5000) {
-      console.warn(`⚠️ PDF generation took ${elapsed}ms (exceeds 5s threshold)`);
-    }
-
-    return Buffer.from(pdfBuffer);
-  } catch (pdfErr) {
-    console.timeEnd('⏱ PDF generation');
-    console.error('❌ PDF rendering failed:', pdfErr.message);
-    await browser.close();
-    throw new Error(`PDF generation failed: ${pdfErr.message}`);
-  }
+  // Delegate PDF generation to the stateless pdfService
+  return await generatePDF(html);
 };
 
 module.exports = {

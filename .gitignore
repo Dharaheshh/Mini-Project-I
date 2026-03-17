@@ -8,6 +8,7 @@ frontend/node_modules/
 backend/.env
 frontend/.env
 backend/.cache/
+.cache/
 # Build outputs
 frontend/build/
 backend/dist/

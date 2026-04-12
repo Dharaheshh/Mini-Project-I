@@ -2,17 +2,19 @@
  * pdfService.js
  * Stateless PDF generation service.
  *
- * Detects OS platform (not NODE_ENV) to choose the right Chrome strategy:
+ * Platform detection (OS-based, not NODE_ENV):
  *  - Linux (Render / Docker / K8s): puppeteer-core + @sparticuz/chromium
  *  - Windows / Mac (local dev):     standard puppeteer (bundled Chrome)
+ *
+ * Rendering consistency:
+ *  - Explicit viewport (1200x800, 1x scale)
+ *  - Font-render-hinting disabled for cross-platform consistency
+ *  - Waits for document.fonts.ready before PDF capture
  */
 const os = require('os');
 
 const isLinux = os.platform() === 'linux';
 
-/**
- * generatePDF(html) → Buffer
- */
 const generatePDF = async (html) => {
   let browser;
   const started = Date.now();
@@ -20,19 +22,21 @@ const generatePDF = async (html) => {
 
   try {
     if (isLinux) {
-      // ── Linux container: puppeteer-core + @sparticuz/chromium ──
       const puppeteer = require('puppeteer-core');
       const chromium = require('@sparticuz/chromium');
       browser = await puppeteer.launch({
-        args: chromium.args,
+        args: [...chromium.args, '--font-render-hinting=none'],
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,
-        defaultViewport: chromium.defaultViewport,
+        defaultViewport: null,
       });
     } else {
-      // ── Windows / Mac: standard puppeteer with bundled Chrome ──
       const puppeteer = require('puppeteer');
-      browser = await puppeteer.launch({ headless: true });
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'],
+        defaultViewport: null,
+      });
     }
   } catch (err) {
     console.timeEnd('⏱ PDF generation');
@@ -42,7 +46,15 @@ const generatePDF = async (html) => {
 
   try {
     const page = await browser.newPage();
+
+    // Explicit viewport for consistent layout across environments
+    await page.setViewport({ width: 1200, height: 800, deviceScaleFactor: 1 });
+
+    // Load HTML content and wait for all network resources (Chart.js CDN)
     await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    // Wait for all fonts to fully load before rendering
+    await page.evaluateHandle('document.fonts.ready');
 
     const pdfBuffer = await page.pdf({
       format: 'A4',

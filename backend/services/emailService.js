@@ -2,9 +2,15 @@
  * emailService.js
  * Sends supervisor PDF report emails via Nodemailer + Gmail SMTP.
  *
- * Uses explicit IPv4 (family: 4) to avoid Render ENETUNREACH IPv6 errors.
+ * Features:
+ *  - IPv4 enforced (family: 4) to avoid Render ENETUNREACH
+ *  - Retry logic: up to 3 attempts with 5-second delays
+ *  - Connection timeouts for reliability
  */
 const nodemailer = require('nodemailer');
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 5000;
 
 const createTransporter = () => {
     return nodemailer.createTransport({
@@ -16,28 +22,25 @@ const createTransporter = () => {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
-        connectionTimeout: 15000,
-        greetingTimeout: 15000,
-        socketTimeout: 20000,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
     });
 };
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const sendSupervisorReport = async (supervisor, department, stats, pdfBuffer) => {
-    try {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            console.warn('⚠️ SMTP credentials missing — email dispatch skipped.');
-            return false;
-        }
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.warn('⚠️ SMTP credentials missing — email dispatch skipped.');
+        return false;
+    }
 
-        const transporter = createTransporter();
-
-        console.log(`📧 Sending supervisor report to: ${supervisor.email}`);
-
-        const mailOptions = {
-            from: process.env.SMTP_FROM || '"Admin Portal" <admin@college.edu>',
-            to: supervisor.email,
-            subject: `${department.charAt(0).toUpperCase() + department.slice(1)} Monthly Activity Report`,
-            html: `
+    const mailOptions = {
+        from: process.env.SMTP_FROM || '"Admin Portal" <admin@college.edu>',
+        to: supervisor.email,
+        subject: `${department.charAt(0).toUpperCase() + department.slice(1)} Monthly Activity Report`,
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
           <h2 style="color: #2563eb;">Department Action Report</h2>
           <p>Hello ${supervisor.name},</p>
@@ -59,21 +62,32 @@ const sendSupervisorReport = async (supervisor, department, stats, pdfBuffer) =>
           </p>
         </div>
       `,
-            attachments: [
-                {
-                    filename: `${department}-report.pdf`,
-                    content: pdfBuffer,
-                    contentType: 'application/pdf',
-                },
-            ],
-        };
+        attachments: [
+            {
+                filename: `${department}-report.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+            },
+        ],
+    };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`✉️ Supervisor report sent to ${supervisor.email}: ${info.messageId}`);
-        return true;
-    } catch (error) {
-        console.error('❌ SMTP send error:', error.message);
-        throw new Error(`Email dispatch failed: ${error.message}`);
+    // Retry loop
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const transporter = createTransporter();
+            console.log(`📧 Sending supervisor report to: ${supervisor.email} (attempt ${attempt}/${MAX_RETRIES})`);
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`✉️ Supervisor report sent to ${supervisor.email}: ${info.messageId}`);
+            return true;
+        } catch (error) {
+            console.error(`❌ SMTP send error (attempt ${attempt}/${MAX_RETRIES}): ${error.message}`);
+            if (attempt < MAX_RETRIES) {
+                console.log(`⏳ Retrying in ${RETRY_DELAY_MS / 1000}s...`);
+                await sleep(RETRY_DELAY_MS);
+            } else {
+                throw new Error(`Email dispatch failed after ${MAX_RETRIES} attempts: ${error.message}`);
+            }
+        }
     }
 };
 

@@ -4,36 +4,54 @@
  *  - Due soon complaints (deadline < 12 hours away)
  *  - Overdue complaints (deadline passed, still unresolved)
  *
- * Sends email alerts via emailNotifier service.
- * Errors are logged but never interrupt the server.
+ * Features:
+ *  - 10-minute cooldown per complaint after failure (prevents spam)
+ *  - Per-complaint retry counter (max 3 attempts per cycle, then cooldown)
+ *  - Errors are logged but never interrupt the server
  */
 const cron = require('node-cron');
 const Complaint = require('../models/Complaint');
 const { sendDueSoonEmail, sendOverdueEmail } = require('../services/emailNotifier');
 
-// PART 5: In-memory retry protection — skip re-sending for 10 minutes after a failure
-const failedEmailCooldown = new Map();
+// In-memory cooldown tracker
+const failedEmailCooldown = new Map();  // complaintId → { timestamp, retryCount }
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_RETRIES = 3;
+
+function getFailureInfo(complaintId) {
+  return failedEmailCooldown.get(complaintId) || null;
+}
 
 function isOnCooldown(complaintId) {
-  const lastFail = failedEmailCooldown.get(complaintId);
-  if (!lastFail) return false;
-  if (Date.now() - lastFail > COOLDOWN_MS) {
+  const info = getFailureInfo(complaintId);
+  if (!info) return false;
+  if (Date.now() - info.timestamp > COOLDOWN_MS) {
     failedEmailCooldown.delete(complaintId);
     return false;
   }
-  return true;
+  // Still in cooldown AND exceeded max retries
+  if (info.retryCount >= MAX_RETRIES) return true;
+  return false;
+}
+
+function recordFailure(complaintId) {
+  const existing = getFailureInfo(complaintId);
+  const retryCount = existing ? existing.retryCount + 1 : 1;
+  failedEmailCooldown.set(complaintId, { timestamp: Date.now(), retryCount });
+}
+
+function clearFailure(complaintId) {
+  failedEmailCooldown.delete(complaintId);
 }
 
 function startEmailCron() {
   // Run every 30 minutes
-  cron.schedule('*/1 * * * *', async () => {
+  cron.schedule('*/30 * * * *', async () => {
     console.log('⏰ [Email Cron] Running SLA check...');
     try {
       const now = new Date();
       const twelveHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
-      // Find all unresolved complaints with an SLA deadline
       const unresolvedComplaints = await Complaint.find({
         status: { $ne: 'Resolved' },
         slaDeadline: { $exists: true, $ne: null },
@@ -46,7 +64,6 @@ function startEmailCron() {
       for (const complaint of unresolvedComplaints) {
         const cid = complaint._id.toString();
 
-        // Skip if this complaint email recently failed
         if (isOnCooldown(cid)) {
           skippedCount++;
           continue;
@@ -56,21 +73,22 @@ function startEmailCron() {
 
         try {
           if (deadline < now) {
-            // OVERDUE
             await sendOverdueEmail(complaint);
             overdueCount++;
+            clearFailure(cid); // Success — clear any previous failures
           } else if (deadline <= twelveHoursLater) {
-            // DUE SOON (within 12 hours)
             await sendDueSoonEmail(complaint);
             dueSoonCount++;
+            clearFailure(cid);
           }
         } catch (emailErr) {
-          console.error(`❌ [Email Cron] Email failed for complaint #${cid.slice(-6)}: ${emailErr.message}`);
-          failedEmailCooldown.set(cid, Date.now());
+          recordFailure(cid);
+          const info = getFailureInfo(cid);
+          console.error(`❌ [Email Cron] Email failed for #${cid.slice(-6)} (attempt ${info.retryCount}/${MAX_RETRIES}): ${emailErr.message}`);
         }
       }
 
-      console.log(`⏰ [Email Cron] Done. Overdue: ${overdueCount}, Due Soon: ${dueSoonCount}${skippedCount ? `, Skipped (cooldown): ${skippedCount}` : ''}`);
+      console.log(`⏰ [Email Cron] Done. Overdue: ${overdueCount}, Due Soon: ${dueSoonCount}${skippedCount ? `, Skipped: ${skippedCount}` : ''}`);
     } catch (err) {
       console.error(`❌ [Email Cron] Error: ${err.message}`);
     }

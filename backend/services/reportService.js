@@ -103,6 +103,8 @@ const generateReport = async (filters) => {
     <title>System Damage Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+      /* Explicit cross-platform fonts — avoids layout shifts on containers missing system fonts */
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
       :root {
         --primary: #2563eb;
         --secondary: #475569;
@@ -110,12 +112,14 @@ const generateReport = async (filters) => {
         --surface: #ffffff;
         --border: #e2e8f0;
       }
+      * { box-sizing: border-box; }
       body { 
-        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+        font-family: 'Inter', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif; 
         margin: 0;
         padding: 40px; 
         color: #1e293b; 
         background-color: var(--bg);
+        -webkit-font-smoothing: antialiased;
       }
       .header {
         text-align: center;

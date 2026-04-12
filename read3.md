@@ -1,367 +1,215 @@
+You are a senior Node.js infrastructure engineer tasked with fixing two production issues in a MERN-based microservice system called Smart Campus Damage Reporter.
 
+The system generates PDF reports using Puppeteer and sends them via Gmail SMTP using Nodemailer.
 
-Your current problems come from:
+The application works perfectly in local development, but issues occur when deployed to Render cloud containers.
 
-* **Puppeteer needing a full Chrome environment**
-* **SMTP networking instability**
-* **Platform-dependent dependencies**
+The system must also remain compatible with future Docker, Kubernetes, and AWS deployments.
 
-For **containerized / cloud-native systems**, the best approach is:
+Problem 1 — PDF Layout Broken in Render
 
-✅ **Headless Chromium with puppeteer-core** (container controlled)
-✅ **API-based email provider (Resend / SES)** instead of SMTP
-✅ **Environment-aware config**
-✅ **Stateless PDF generation service**
+Locally generated PDFs render correctly.
 
-This works **locally → Docker → Kubernetes → AWS** without breaking.
+On Render:
 
-Below is the **DETAILED PROMPT for your Antigravity agent**.
+layout spacing is broken
 
-You can paste it directly.
+alignment is inconsistent
 
----
+fonts look different
 
-# Prompt for Antigravity Agent
-
-You are a **senior backend infrastructure engineer** tasked with fixing **PDF generation and email delivery reliability** in a production-style MERN + FastAPI microservice project.
-
-The system is a **Smart Campus Damage Reporter** deployed on **Render currently**, but it must be redesigned to work reliably across:
-
-* Local development
-* Docker containers
-* Kubernetes clusters
-* AWS infrastructure
-
-The current stack:
-
-Frontend
-React (Vite)
-TailwindCSS
-Axios
-
-Backend
-Node.js
-Express.js
-MongoDB Atlas
-
-ML Server
-FastAPI
-PyTorch
-
-Deployment targets
-Render (current)
-Docker
-Kubernetes
-AWS (future)
-
----
-
-# Current Problems
-
-## Problem 1 — PDF Generation Failure
-
-Current implementation uses **Puppeteer with bundled Chromium**.
-
-Error:
-
-```
-Could not find Chrome
-Could not launch browser
-```
-
-Render containers do not ship with Chrome, and installation attempts using:
-
-```
-npx puppeteer browsers install chrome
-```
-
-fail in many environments.
-
-This approach is **not reliable for containerized environments**.
-
----
-
-## Problem 2 — Email Delivery Failure
-
-Emails currently use **Nodemailer + Gmail SMTP**.
-
-Errors:
-
-```
-connect ENETUNREACH 2607:f8b0:400e::465
-Connection timeout
-```
+elements shift positions
 
 Root cause:
 
-* Render attempting IPv6 SMTP connection
-* Gmail SMTP instability
-* SMTP not ideal for containerized deployments
+Render containers do not include system fonts, causing Chromium to substitute fallback fonts which breaks layout.
 
----
+Required Fix
 
-# Required Architecture Changes
+Modify the PDF generation system to ensure consistent rendering across environments.
 
-The system must be redesigned for **cloud-native reliability**.
+Implement the following changes.
 
-Key requirements:
+1 Install Standard Fonts
 
-* Must work in **Docker containers**
-* Must scale in **Kubernetes**
-* Must deploy easily to **AWS ECS / EKS**
-* Must work in **serverless environments**
-* Must not rely on host-installed Chrome
+Ensure the container installs fonts used in the HTML templates.
 
----
+Required fonts:
 
-# Solution Design
+fonts-liberation
+fonts-noto
+fonts-dejavu
 
-## 1 — Replace Puppeteer with puppeteer-core + Sparticuz Chromium
+If Docker is used later, the Dockerfile must include:
 
-Install:
+apt-get update
+apt-get install -y \
+fonts-liberation \
+fonts-noto \
+fonts-dejavu \
+fontconfig
+2 Embed Fonts in CSS
 
-```
-npm install puppeteer-core @sparticuz/chromium
-```
+Update the HTML report template to use explicit fonts instead of system defaults.
 
-This allows using a **portable headless chromium binary** compatible with containers.
+Example CSS:
 
-Implementation requirements:
+body {
+  font-family: "DejaVu Sans", "Liberation Sans", Arial, sans-serif;
+}
 
-* Launch puppeteer using chromium executable path
-* Support serverless and container runtime
-* Avoid puppeteer bundled browser downloads
+Avoid relying on default browser fonts.
 
-Example expected implementation:
+3 Force Puppeteer Rendering Settings
 
-```javascript
-const chromium = require("@sparticuz/chromium");
-const puppeteer = require("puppeteer-core");
+Update Puppeteer launch configuration.
 
 const browser = await puppeteer.launch({
-  args: chromium.args,
-  executablePath: await chromium.executablePath(),
-  headless: chromium.headless
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--font-render-hinting=none"
+  ],
+  headless: true
+});
+4 Set Explicit Viewport
+
+Before rendering HTML:
+
+await page.setViewport({
+  width: 1200,
+  height: 800,
+  deviceScaleFactor: 1
+});
+5 Wait for Layout to Fully Render
+
+Add rendering delay before generating PDF.
+
+await page.setContent(html, {
+  waitUntil: "networkidle0"
 });
 
-const page = await browser.newPage();
-await page.setContent(htmlTemplate);
-
-const pdfBuffer = await page.pdf({
+await page.evaluateHandle("document.fonts.ready");
+6 Use Proper PDF Options
+const pdf = await page.pdf({
   format: "A4",
-  printBackground: true
+  printBackground: true,
+  margin: {
+    top: "20px",
+    right: "20px",
+    bottom: "20px",
+    left: "20px"
+  }
 });
+Problem 2 — Gmail SMTP Timeout on Render
 
-await browser.close();
-```
+Email sending works locally but fails in Render.
 
-The PDF generator should return a **Buffer** that can be:
+Logs show:
 
-* downloaded
-* emailed
-* stored
+Connection timeout
+connect ENETUNREACH 2607:f8b0:400e::465
 
----
+Root cause:
 
-## 2 — Refactor PDF Generation into a Service Layer
+Render attempts IPv6 SMTP connection to Gmail.
 
-Create a reusable service:
+Required Fix
 
-```
-services/pdfService.js
-```
+Refactor Nodemailer transport configuration to enforce IPv4 and improve reliability.
 
-Responsibilities:
+Update Transport Configuration
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
 
-* Accept HTML template
-* Launch chromium
-* generate PDF
-* return buffer
+  family: 4,
 
-This service must be **stateless**.
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 
----
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+Add Email Retry Logic
 
-## 3 — Replace SMTP with API-based Email Service
+If email sending fails, retry up to 3 times.
 
-SMTP should be removed.
+maxRetries = 3
+retryDelay = 5 seconds
 
-Use an **email API provider**.
+This prevents cron job spam and increases reliability.
 
-Preferred options:
+Cron Job Improvements
 
-1️⃣ AWS SES (best for AWS future deployment)
-2️⃣ Resend API (simpler dev experience)
+Your SLA cron currently floods logs when emails fail.
 
-Implementation must support:
+Add:
 
-```
-EMAIL_PROVIDER=resend | ses
-```
+retry protection
 
-Environment-based switching.
+error suppression
 
----
+failure tracking
 
-### Example Resend Implementation
+Example logic:
 
-Install:
-
-```
-npm install resend
-```
-
-Service:
-
-```
-services/emailService.js
-```
-
-Example:
-
-```javascript
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-export async function sendEmail({ to, subject, html, attachments }) {
-
-  await resend.emails.send({
-    from: "Campus Reporter <alerts@campus.ai>",
-    to,
-    subject,
-    html,
-    attachments
-  });
-
+if (retryCount >= 3) {
+  log failure
+  skip sending
 }
-```
+Expected Final Behavior
 
-Attachments should support **PDF buffers**.
-
----
-
-## 4 — Container Friendly Setup
-
-Update project for container environments.
-
-Requirements:
-
-* No dependency on system Chrome
-* No runtime browser installation
-* All dependencies resolved via npm
-
----
-
-## 5 — Docker Compatibility
-
-Ensure PDF generation works inside containers.
-
-Expected Dockerfile pattern:
-
-```
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-
-RUN npm install
-
-COPY . .
-
-EXPOSE 5000
-
-CMD ["node", "server.js"]
-```
-
-Chromium must be handled by **@sparticuz/chromium**, not OS packages.
-
----
-
-## 6 — Kubernetes Compatibility
-
-Ensure system is **stateless**.
-
-PDF generation should:
-
-* generate buffer
-* send response
-* close browser
-
-No filesystem writes.
-
----
-
-## 7 — Fix Cron Email System
-
-Cron job currently floods logs when email fails.
-
-Implement:
-
-* retry limit
-* exponential backoff
-* failure logging
-
-Example:
-
-```
-maxRetries: 3
-retryDelay: 5 minutes
-```
-
----
-
-# Final Expected System Behavior
-
-Admin exports department report.
+When admin exports department report:
 
 Flow:
 
-```
 Admin dashboard
-      ↓
-Backend endpoint
-      ↓
+↓
+Backend export endpoint
+↓
 Generate HTML report
-      ↓
-pdfService converts HTML → PDF
-      ↓
-PDF returned to user
-      ↓
-Optional: emailService sends PDF attachment
-```
+↓
+Puppeteer renders HTML
+↓
+Fonts load correctly
+↓
+Consistent PDF layout generated
+↓
+PDF attached to email
+↓
+Nodemailer sends email using IPv4 SMTP
 
-This architecture must run reliably in:
+PDF layout must be identical across local and Render deployments.
 
-* Local dev
-* Docker containers
-* Kubernetes pods
-* AWS infrastructure
+Email sending must not timeout.
 
----
+Implementation Deliverables
 
-# Deliverables Expected from Agent
+Update Puppeteer launch configuration
 
-1. Refactor PDF generation into `pdfService`
-2. Replace Puppeteer with puppeteer-core + Sparticuz Chromium
-3. Replace SMTP with API email provider
-4. Implement `emailService`
-5. Ensure Docker compatibility
-6. Remove platform-specific hacks
-7. Update report export endpoint
-8. Ensure attachments work for email reports
+Ensure fonts are available
 
----
+Embed fonts in report templates
 
-# Critical Requirements
+Update SMTP configuration
+
+Add retry logic to email sender
+
+Improve cron failure handling
+
+Constraints
 
 Do NOT:
 
-* reinstall Chrome dynamically
-* rely on system binaries
-* use Gmail SMTP
+dynamically install Chrome during runtime
 
-The solution must be **cloud-native and container-friendly**.
+rely on system default fonts
 
+remove Puppeteer
 
+The solution must remain compatible with Docker, Kubernetes, and AWS deployment environments.

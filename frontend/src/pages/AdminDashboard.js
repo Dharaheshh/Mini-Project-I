@@ -24,6 +24,7 @@ import {
   Clock,
   FileText,
   Mail,
+  MessageSquare,
   Activity,
   ChevronDown,
   ChevronRight,
@@ -54,6 +55,7 @@ const AdminDashboard = () => {
   const [exporting, setExporting] = useState(false);
   const [exportingDept, setExportingDept] = useState(null);
   const [sendingEmail, setSendingEmail] = useState(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(null);
   const [expandedDepts, setExpandedDepts] = useState({
     infrastructure: true,
     electrical: false,
@@ -175,6 +177,21 @@ const AdminDashboard = () => {
       alert(error.response?.data?.message || 'Failed to dispatch email to supervisor.');
     } finally {
       setSendingEmail(null);
+    }
+  };
+
+  const handleSendWhatsApp = async (department) => {
+    if (!window.confirm(`Send the ${department} department PDF report via WhatsApp?`)) return;
+
+    try {
+      setSendingWhatsApp(department);
+      const response = await adminAPI.sendWhatsAppReport(department);
+      alert(response.data.message || 'Report sent via WhatsApp successfully!');
+    } catch (error) {
+      console.error('WhatsApp send error:', error);
+      alert(error.response?.data?.message || 'Failed to dispatch WhatsApp report.');
+    } finally {
+      setSendingWhatsApp(null);
     }
   };
 
@@ -353,13 +370,17 @@ const AdminDashboard = () => {
             <div key={dept} className="flex flex-col p-5 bg-slate-50 hover:bg-primary-50/30 transition-colors rounded-xl border border-slate-200">
               <h4 className="font-bold text-slate-900 capitalize mb-4 text-center">{dept} Department</h4>
               <div className="flex flex-col gap-3 mt-auto">
-                <Button variant="outline" size="sm" className="w-full justify-center !text-primary-600 border-primary-200 hover:bg-primary-50" onClick={() => handleDepartmentExport(dept)} disabled={exportingDept === dept || sendingEmail === dept}>
+                <Button variant="outline" size="sm" className="w-full justify-center !text-primary-600 border-primary-200 hover:bg-primary-50" onClick={() => handleDepartmentExport(dept)} disabled={exportingDept === dept || sendingEmail === dept || sendingWhatsApp === dept}>
                   <Download size={14} className="mr-2" />
                   {exportingDept === dept ? 'Generating...' : 'Download PDF'}
                 </Button>
-                <Button size="sm" className="w-full justify-center shadow-lg hover:shadow-primary-500/30" onClick={() => handleSendEmail(dept)} disabled={sendingEmail === dept || exportingDept === dept}>
+                <Button size="sm" className="w-full justify-center shadow-lg hover:shadow-primary-500/30" onClick={() => handleSendEmail(dept)} disabled={sendingEmail === dept || exportingDept === dept || sendingWhatsApp === dept}>
                   <Mail size={14} className="mr-2" />
                   {sendingEmail === dept ? 'Dispatching...' : 'Send via Email'}
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-center !text-green-700 border-green-300 hover:bg-green-50" onClick={() => handleSendWhatsApp(dept)} disabled={sendingWhatsApp === dept || sendingEmail === dept || exportingDept === dept}>
+                  <MessageSquare size={14} className="mr-2" />
+                  {sendingWhatsApp === dept ? 'Sending...' : 'Send via WhatsApp'}
                 </Button>
               </div>
             </div>

@@ -12,6 +12,7 @@
 const cron = require('node-cron');
 const Complaint = require('../models/Complaint');
 const { sendDueSoonEmail, sendOverdueEmail } = require('../services/emailNotifier');
+const { sendDueSoonWhatsApp, sendOverdueWhatsApp } = require('../services/notificationOrchestrator');
 
 // In-memory cooldown tracker
 const failedEmailCooldown = new Map();  // complaintId → { timestamp, retryCount }
@@ -73,11 +74,18 @@ function startEmailCron() {
 
         try {
           if (deadline < now) {
-            await sendOverdueEmail(complaint);
+            // ✉️ Email + 📱 WhatsApp run in parallel — neither blocks the other
+            await Promise.allSettled([
+              sendOverdueEmail(complaint),
+              sendOverdueWhatsApp(complaint),
+            ]);
             overdueCount++;
-            clearFailure(cid); // Success — clear any previous failures
+            clearFailure(cid);
           } else if (deadline <= twelveHoursLater) {
-            await sendDueSoonEmail(complaint);
+            await Promise.allSettled([
+              sendDueSoonEmail(complaint),
+              sendDueSoonWhatsApp(complaint),
+            ]);
             dueSoonCount++;
             clearFailure(cid);
           }

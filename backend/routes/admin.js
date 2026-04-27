@@ -85,6 +85,70 @@ router.post('/send-department-report', async (req, res) => {
   }
 });
 
+// @route   POST /api/admin/send-whatsapp-report
+// @desc    Generate and send department PDF report via WhatsApp to supervisor's number
+// @access  Private/Admin
+router.post('/send-whatsapp-report', async (req, res) => {
+  try {
+    const { department } = req.body;
+    if (!['infrastructure', 'electrical', 'plumbing'].includes(department)) {
+      return res.status(400).json({ message: 'Invalid department scope provided' });
+    }
+
+    const whatsappService = require('../services/whatsappService');
+    if (!whatsappService.isReady()) {
+      return res.status(503).json({ message: 'WhatsApp service not configured. Check WHATSAPP_ACCESS_TOKEN in .env' });
+    }
+
+    const { getDepartmentNumber } = require('../config/whatsappGroups');
+    const supervisorNumber = getDepartmentNumber(department) || process.env.ADMIN_WHATSAPP_NUMBER;
+
+    if (!supervisorNumber) {
+      return res.status(404).json({ message: `No WhatsApp number configured for ${department} department.` });
+    }
+
+    const reportService = require('../services/reportService');
+    const WhatsAppLog = require('../models/WhatsAppLog');
+
+    // Generate PDF in memory
+    const pdfBuffer = await reportService.generateReport({ type: 'department', department });
+    const filename = `${department}-report-${new Date().toISOString().split('T')[0]}.pdf`;
+
+    const totalComplaints = await Complaint.countDocuments({ assignedDepartment: department });
+    const resolved = await Complaint.countDocuments({ assignedDepartment: department, status: 'Resolved' });
+    const pending = totalComplaints - resolved;
+
+    const caption =
+      `📊 *${department.charAt(0).toUpperCase() + department.slice(1)} Department Report*\n\n` +
+      `📋 Total: ${totalComplaints} | ✅ Resolved: ${resolved} | ⏳ Pending: ${pending}\n\n` +
+      `Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
+
+    const result = await whatsappService.sendPdfDocument(supervisorNumber, pdfBuffer, filename, caption);
+
+    // Create a log entry (using a placeholder complaint ID for manual dispatches)
+    await WhatsAppLog.create({
+      complaint: new (require('mongoose').Types.ObjectId)(),
+      recipient: supervisorNumber,
+      recipientType: 'department_supervisor',
+      department,
+      messageType: 'pdf_report',
+      status: result.success ? 'sent' : 'failed',
+      apiResponse: result.messageId,
+      errorMessage: result.error,
+      sentAt: result.success ? new Date() : undefined,
+    });
+
+    if (result.success) {
+      res.json({ message: `PDF report dispatched to WhatsApp (${supervisorNumber})` });
+    } else {
+      res.status(500).json({ message: `WhatsApp dispatch failed: ${result.error}` });
+    }
+  } catch (error) {
+    console.error('Send WhatsApp report error:', error.message);
+    res.status(500).json({ message: `WhatsApp report dispatch failed: ${error.message}` });
+  }
+});
+
 // @route   GET /api/admin/system-check
 // @desc    Diagnostic endpoint — tests PDF generation and SMTP email
 // @access  Private/Admin

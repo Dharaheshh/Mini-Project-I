@@ -199,6 +199,11 @@ router.post(
         const { sendHighPriorityEmail } = require('../services/emailNotifier');
         sendHighPriorityEmail(complaint).catch(err => console.error('📧 Email alert error:', err.message));
       }
+
+      // 📱 Fire-and-forget: Send WhatsApp notification for new complaint
+      // Duplicate check is handled inside the orchestrator
+      const { notifyNewComplaint } = require('../services/notificationOrchestrator');
+      notifyNewComplaint(complaint).catch(err => console.error('📱 WhatsApp alert error:', err.message));
     } catch (error) {
       console.error('Create complaint error:', error);
       res.status(500).json({ message: 'Server error', error: error.message });

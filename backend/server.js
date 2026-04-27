@@ -17,6 +17,11 @@ if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
 if (!process.env.MONGODB_URI) {
   console.warn('⚠️  MONGODB_URI is not set — database connection will fallback to localhost.');
 }
+if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID || !process.env.ADMIN_WHATSAPP_NUMBER) {
+  console.warn('⚠️  WhatsApp credentials missing — WhatsApp notification features will be disabled.');
+} else {
+  console.log('📱 WhatsApp service configured. Token refresh reminder: check expiry in Meta Business Suite.');
+}
 console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}${process.env.RENDER ? ' (Render)' : ''}`);
 
 const app = express();
@@ -55,6 +60,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/blocks', require('./routes/blocks'));
 app.use('/api/supervisor', require('./routes/supervisor'));
+app.use('/api/test', require('./routes/testWhatsapp'));
 
 // Health check
 app.get('/api/health', (req, res) => {

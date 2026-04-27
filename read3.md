@@ -1,215 +1,235 @@
-You are a senior Node.js infrastructure engineer tasked with fixing two production issues in a MERN-based microservice system called Smart Campus Damage Reporter.
+You are a senior staff-level backend engineer working directly inside my existing project codebase.
 
-The system generates PDF reports using Puppeteer and sends them via Gmail SMTP using Nodemailer.
+Your task is to inspect the ENTIRE repository first, understand the current architecture, then implement a production-ready WhatsApp notification system for issue creation events.
 
-The application works perfectly in local development, but issues occur when deployed to Render cloud containers.
+Do NOT blindly generate isolated code. First understand how the project currently works, then integrate cleanly into the existing structure.
 
-The system must also remain compatible with future Docker, Kubernetes, and AWS deployments.
+---
 
-Problem 1 — PDF Layout Broken in Render
+# PHASE 1: FULL CODEBASE ANALYSIS (MANDATORY FIRST)
 
-Locally generated PDFs render correctly.
+Before writing code:
 
-On Render:
+## Inspect and understand:
 
-layout spacing is broken
+1. Folder structure
+2. Backend architecture
+3. Existing routes/controllers/services
+4. Database models / schemas
+5. Issue creation workflow
+6. Existing notification systems (email/SMS/etc.)
+7. Environment config system
+8. Logging utilities
+9. Error handling patterns
+10. Naming conventions
+11. Middleware/auth patterns
 
-alignment is inconsistent
+## Then summarize:
 
-fonts look different
+* Current backend stack
+* How issues are created now
+* Best integration points
+* Existing patterns to reuse
+* Risks before implementation
 
-elements shift positions
+Do this BEFORE modifying files.
 
-Root cause:
+---
 
-Render containers do not include system fonts, causing Chromium to substitute fallback fonts which breaks layout.
+# PHASE 2: FEATURE TO BUILD
 
-Required Fix
+Implement WhatsApp notifications when a new issue is created.
 
-Modify the PDF generation system to ensure consistent rendering across environments.
+Workflow:
 
-Implement the following changes.
+1. New issue created
+2. Check if duplicate notification
+3. If duplicate → skip WhatsApp send
+4. If not duplicate:
 
-1 Install Standard Fonts
+   * Notify admin personal number
+   * Notify department-specific WhatsApp group
+5. Save notification logs
+6. Return clean success/failure states
 
-Ensure the container installs fonts used in the HTML templates.
+---
 
-Required fonts:
+# DUPLICATE DETECTION RULES
 
-fonts-liberation
-fonts-noto
-fonts-dejavu
+USE THE EXISTING DUPLICATE DETECTION LOGIC IN THE CODEBASE.
 
-If Docker is used later, the Dockerfile must include:
+# DEPARTMENT ROUTING
 
-apt-get update
-apt-get install -y \
-fonts-liberation \
-fonts-noto \
-fonts-dejavu \
-fontconfig
-2 Embed Fonts in CSS
+Map issue types dynamically:
 
-Update the HTML report template to use explicit fonts instead of system defaults.
+* electrical → group ID
+* civil → group ID
+* plumbing → group ID
+* carpentry → group ID
+* network → group ID
 
-Example CSS:
+Use env or config, not hardcoded values.
 
-body {
-  font-family: "DejaVu Sans", "Liberation Sans", Arial, sans-serif;
-}
+Fallback:
 
-Avoid relying on default browser fonts.
+* If no mapping found, notify admin only and log warning.
 
-3 Force Puppeteer Rendering Settings
+---
 
-Update Puppeteer launch configuration.
+# MESSAGE FORMAT
 
-const browser = await puppeteer.launch({
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--font-render-hinting=none"
-  ],
-  headless: true
-});
-4 Set Explicit Viewport
+Use professional readable WhatsApp message:
 
-Before rendering HTML:
+🚨 New Campus Issue Reported
 
-await page.setViewport({
-  width: 1200,
-  height: 800,
-  deviceScaleFactor: 1
-});
-5 Wait for Layout to Fully Render
+📍 Location: {location}
+🛠 Type: {issueType}
+⚠ Severity: {severity}
+📝 Description: {description}
+🕒 Reported: {timestamp}
+🎫 Ticket ID: {ticketId}
+🔗 Dashboard: {optional_link}
+whatever meta data available with us use it  if not create em
+---
 
-Add rendering delay before generating PDF.
+# TECHNICAL REQUIREMENTS
 
-await page.setContent(html, {
-  waitUntil: "networkidle0"
-});
+Use existing stack and conventions.
 
-await page.evaluateHandle("document.fonts.ready");
-6 Use Proper PDF Options
-const pdf = await page.pdf({
-  format: "A4",
-  printBackground: true,
-  margin: {
-    top: "20px",
-    right: "20px",
-    bottom: "20px",
-    left: "20px"
-  }
-});
-Problem 2 — Gmail SMTP Timeout on Render
+Prefer:
 
-Email sending works locally but fails in Render.
+* Node.js
+* Express
+* Existing DB models
+* Existing logger if present
+* Existing config loader
 
-Logs show:
+Use async/await.
 
-Connection timeout
-connect ENETUNREACH 2607:f8b0:400e::465
+No duplicate business logic if reusable modules already exist.
 
-Root cause:
+---
 
-Render attempts IPv6 SMTP connection to Gmail.
+# CREATE / MODIFY FILES INTELLIGENTLY
 
-Required Fix
+Only add files if needed.
 
-Refactor Nodemailer transport configuration to enforce IPv4 and improve reliability.
+Possible structure:
 
-Update Transport Configuration
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+* services/whatsappService.js
+* services/notificationService.js
+* services/duplicateCheckService.js
+* config/whatsappConfig.js
+* models/NotificationLog.js
+* routes/testNotificationRoutes.js
 
-  family: 4,
+But adapt to current codebase patterns.
 
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
+---
 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-Add Email Retry Logic
+# WHATSAPP API INTEGRATION
 
-If email sending fails, retry up to 3 times.
+Use Meta WhatsApp Cloud API.
 
-maxRetries = 3
-retryDelay = 5 seconds
+Use environment variables:
 
-This prevents cron job spam and increases reliability.
+```env id="4vso7x"
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+ADMIN_WHATSAPP_NUMBER=
+DASHBOARD_URL=
+GROUP_ELECTRICAL=
+GROUP_CIVIL=
+GROUP_PLUMBING=
+GROUP_CARPENTRY=
+GROUP_NETWORK=
+```
 
-Cron Job Improvements
+Never hardcode secrets.
 
-Your SLA cron currently floods logs when emails fail.
+---
 
-Add:
+# LOGGING REQUIREMENTS
 
-retry protection
+Track:
 
-error suppression
+* issueId
+* recipient
+* recipientType
+* messageType
+* status
+* sentAt
+* retries
+* apiResponse
+* errorMessage
 
-failure tracking
+Statuses:
 
-Example logic:
+* pending
+* sent
+* failed
+* skipped_duplicate
+* retrying
 
-if (retryCount >= 3) {
-  log failure
-  skip sending
-}
-Expected Final Behavior
+---
 
-When admin exports department report:
+# ERROR HANDLING
 
-Flow:
+Handle:
 
-Admin dashboard
-↓
-Backend export endpoint
-↓
-Generate HTML report
-↓
-Puppeteer renders HTML
-↓
-Fonts load correctly
-↓
-Consistent PDF layout generated
-↓
-PDF attached to email
-↓
-Nodemailer sends email using IPv4 SMTP
+* Missing env vars
+* Invalid token
+* Network timeout
+* WhatsApp API errors
+* Missing group mapping
+* DB save failures
 
-PDF layout must be identical across local and Render deployments.
+Do not crash issue creation flow if WhatsApp fails.
+Issue creation must still succeed.
 
-Email sending must not timeout.
+---
 
-Implementation Deliverables
+# RETRY LOGIC (BONUS)
 
-Update Puppeteer launch configuration
+If send fails:
 
-Ensure fonts are available
+* Retry up to 3 times
+* Exponential or fixed delay
+* Log each attempt
 
-Embed fonts in report templates
+---
 
-Update SMTP configuration
+# TESTING
 
-Add retry logic to email sender
+Create test routes if suitable:
 
-Improve cron failure handling
+POST /api/test/whatsapp
+POST /api/test/issue-notification
 
-Constraints
+Provide sample payloads.
 
-Do NOT:
+---
 
-dynamically install Chrome during runtime
+# OUTPUT FORMAT REQUIRED
 
-rely on system default fonts
+1. Codebase analysis summary
+2. Files created / modified
+3. Full code changes
+4. Integration explanation
+5. .env additions
+6. How to test
+7. Future scalability ideas
 
-remove Puppeteer
+---
 
-The solution must remain compatible with Docker, Kubernetes, and AWS deployment environments.
+# IMPORTANT RULES
+
+* Inspect first, code second
+* Preserve existing project style
+* Minimal invasive changes
+* Production quality
+* Readable modular code
+* Avoid duplicate logic
+* If better architecture exists in codebase, use it
+
+Think like a senior engineer joining a live project and shipping safely.

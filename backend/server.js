@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const dns = require('dns');
 
 // Force IPv4 DNS resolution globally (fixes Gmail SMTP ENETUNREACH on Render)
-dns.setDefaultResultOrder('ipv4first');
+// dns.setDefaultResultOrder('ipv4first'); // Keep this commented out!
 
 dotenv.config();
 

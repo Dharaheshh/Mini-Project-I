@@ -43,3 +43,7 @@ datasets/raw/**
 !datasets/**/README.md
 !datasets/.gitkeep
 
+__pycache__/
+*.pyc
+node_modules/
+.env

@@ -50,8 +50,8 @@ const Login = () => {
             <Shield size={48} className="text-cyan-300" />
           </div>
           <h1 className="text-4xl font-black mb-4 text-center leading-tight">
-            Smart Campus<br />
-            <span className="text-cyan-300">Damage Reporter</span>
+            Campus Issue Reporting<br />
+            <span className="text-cyan-300">And Resolution System</span>
           </h1>
           <p className="text-blue-200/80 text-center max-w-sm text-lg leading-relaxed">
             AI-Powered infrastructure monitoring and complaint management for modern campuses.
